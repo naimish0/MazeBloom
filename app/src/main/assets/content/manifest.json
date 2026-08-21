@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": 1,
+  "rulesVersion": 1,
+  "campaignCount": 100,
+  "dailyPoolVersion": 1,
+  "dailyCount": 120,
+  "campaignSha256": "cd4b519827dfc41bfd741c179511e53bbfcbc209e7fb7116d0ff65b60243224c",
+  "dailySha256": "5e59e244bf0da0e63a9ff0c020793c3102ce57d60bb45ac148b84817a82673c0",
+  "humanReviewed": false,
+  "generator": {
+    "version": 1,
+    "campaignAttempts": 8338,
+    "dailyAttempts": 5678,
+    "campaignRejections": {
+      "construction": 7497,
+      "unsolvedOrDepth": 226,
+      "profile": 520,
+      "exactDuplicate": 0,
+      "dynamicDuplicate": 0,
+      "hardNearDuplicate": 0
+    },
+    "dailyRejections": {
+      "construction": 4831,
+      "unsolvedOrDepth": 160,
+      "profile": 567,
+      "exactDuplicate": 0,
+      "dynamicDuplicate": 0,
+      "hardNearDuplicate": 0
+    }
+  }
+}

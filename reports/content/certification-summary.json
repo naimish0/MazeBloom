@@ -1,0 +1,63 @@
+{
+  "reportVersion": 1,
+  "automatedCertification": "PASS",
+  "humanReview": "PENDING",
+  "counts": {
+    "campaign": 100,
+    "daily": 120
+  },
+  "checksums": {
+    "campaign": "cd4b519827dfc41bfd741c179511e53bbfcbc209e7fb7116d0ff65b60243224c",
+    "daily": "5e59e244bf0da0e63a9ff0c020793c3102ce57d60bb45ac148b84817a82673c0"
+  },
+  "attempts": {
+    "campaign": 8338,
+    "daily": 5678
+  },
+  "rejections": {
+    "campaign": {
+      "construction": 7497,
+      "unsolvedOrDepth": 226,
+      "profile": 520,
+      "exactDuplicate": 0,
+      "dynamicDuplicate": 0,
+      "hardNearDuplicate": 0
+    },
+    "daily": {
+      "construction": 4831,
+      "unsolvedOrDepth": 160,
+      "profile": 567,
+      "exactDuplicate": 0,
+      "dynamicDuplicate": 0,
+      "hardNearDuplicate": 0
+    }
+  },
+  "distributions": {
+    "campaignDifficulty": {
+      "EASY": 15,
+      "EXPERT": 25,
+      "HARD": 30,
+      "MASTER": 5,
+      "NORMAL": 20,
+      "TUTORIAL": 5
+    },
+    "campaignBoardSize": {
+      "5x5": 70,
+      "6x6": 30
+    },
+    "dailyDifficulty": {
+      "EASY": 36,
+      "EXPERT": 12,
+      "HARD": 24,
+      "NORMAL": 48
+    },
+    "dailyBoardSize": {
+      "5x5": 80,
+      "6x6": 40
+    }
+  },
+  "authoritativeMaxima": {
+    "shortestDiscoveredStates": 96,
+    "auditReachableStates": 96
+  }
+}
