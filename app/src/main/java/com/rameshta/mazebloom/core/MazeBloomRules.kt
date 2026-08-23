@@ -102,6 +102,10 @@ object MazeBloomRules {
         require(state.remainingBuds.bits and validBits.inv() == 0L)
         require(state.bloom.bits and level.staticWalls.bits == 0L)
         require(state.remainingBuds.bits and level.staticWalls.bits == 0L)
+        require(state.remainingBuds.bits and level.initialBuds.bits.inv() == 0L)
+        require(state.seedCell !in state.remainingBuds)
+        require(state.status != GameStatus.SOLVED || state.remainingBuds.isEmpty())
+        require(state.status == GameStatus.SOLVED || !state.remainingBuds.isEmpty())
         require(state.moveCount >= 0)
     }
 

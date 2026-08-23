@@ -1,0 +1,246 @@
+{
+  "status": "PASS",
+  "generatedCount": 1000,
+  "baselineCount": 2220,
+  "corpusCount": 3220,
+  "versions": {
+    "namespace": 1,
+    "certification": 3,
+    "fingerprint": 2,
+    "uniqueness": 2,
+    "segmentPolicy": "bounded-generator-upgrade-v1",
+    "maximumGeneratorVersion": 40
+  },
+  "releaseKeyVersions": {
+    "rules": 1,
+    "solver": 2,
+    "schedule": 1,
+    "candidateKey": 1,
+    "seedNamespace": 1,
+    "history": 1
+  },
+  "segments": [
+    {
+      "id": 1,
+      "start": 101,
+      "generator": 15
+    }
+  ],
+  "namespaceBases": {
+    "1": "d4577c240003ee54"
+  },
+  "endlessBaselineRoot": "cec815d9e353fc390ed5e2e8cc4d32f031f506adf6bb57bca7f726867f31a8cd",
+  "horizonRoot": "1736d76e3b71ba85e02fecb57fda7bba3577204b9d06bdfcb5778933eaabd85c",
+  "historyRoot": "fc40c7fa694d58fe7ba6b09e7a55070c359f6b5cb3890cb54b43974e25229cd3",
+  "attempts": 290031,
+  "candidateAccounting": {
+    "attempts": 290031,
+    "accepted": 1000,
+    "rejectedAttempts": 289031,
+    "segmentExhaustions": 0,
+    "accountedAttempts": 290031,
+    "rawCandidates": 154424,
+    "metricPasses": 36588,
+    "shortestProbeCalls": 36588,
+    "fullCertificationCalls": 20865
+  },
+  "rejections": {
+    "construction": 135607,
+    "unsolvableOrRequiredBudget": 0,
+    "trivialOrOneLine": 0,
+    "profile": 19865,
+    "irrelevantOpenCell": 0,
+    "exactDefinitionOrGeometric": 0,
+    "dynamic": 0,
+    "structural": 56,
+    "solutionGrammar": 1028,
+    "hardNear": 1078,
+    "reviewSimilarity": 8161,
+    "metricPrefilter": 117836,
+    "shortestProbe": 5400
+  },
+  "scheduleBlocks": [
+    {
+      "block": 1,
+      "count": 100,
+      "difficulty": {
+        "EASY": 16,
+        "NORMAL": 28,
+        "HARD": 28,
+        "EXPERT": 20,
+        "MASTER": 8
+      },
+      "boardSize": {
+        "5": 26,
+        "6": 74
+      }
+    },
+    {
+      "block": 2,
+      "count": 100,
+      "difficulty": {
+        "EASY": 16,
+        "NORMAL": 28,
+        "HARD": 28,
+        "EXPERT": 20,
+        "MASTER": 8
+      },
+      "boardSize": {
+        "5": 26,
+        "6": 74
+      }
+    },
+    {
+      "block": 3,
+      "count": 100,
+      "difficulty": {
+        "EASY": 16,
+        "NORMAL": 28,
+        "HARD": 28,
+        "EXPERT": 20,
+        "MASTER": 8
+      },
+      "boardSize": {
+        "5": 26,
+        "6": 74
+      }
+    },
+    {
+      "block": 4,
+      "count": 100,
+      "difficulty": {
+        "EASY": 16,
+        "NORMAL": 28,
+        "HARD": 28,
+        "EXPERT": 20,
+        "MASTER": 8
+      },
+      "boardSize": {
+        "5": 26,
+        "6": 74
+      }
+    },
+    {
+      "block": 5,
+      "count": 100,
+      "difficulty": {
+        "EASY": 16,
+        "NORMAL": 28,
+        "HARD": 28,
+        "EXPERT": 20,
+        "MASTER": 8
+      },
+      "boardSize": {
+        "5": 26,
+        "6": 74
+      }
+    },
+    {
+      "block": 6,
+      "count": 100,
+      "difficulty": {
+        "EASY": 16,
+        "NORMAL": 28,
+        "HARD": 28,
+        "EXPERT": 20,
+        "MASTER": 8
+      },
+      "boardSize": {
+        "5": 26,
+        "6": 74
+      }
+    },
+    {
+      "block": 7,
+      "count": 100,
+      "difficulty": {
+        "EASY": 16,
+        "NORMAL": 28,
+        "HARD": 28,
+        "EXPERT": 20,
+        "MASTER": 8
+      },
+      "boardSize": {
+        "5": 26,
+        "6": 74
+      }
+    },
+    {
+      "block": 8,
+      "count": 100,
+      "difficulty": {
+        "EASY": 16,
+        "NORMAL": 28,
+        "HARD": 28,
+        "EXPERT": 20,
+        "MASTER": 8
+      },
+      "boardSize": {
+        "5": 26,
+        "6": 74
+      }
+    },
+    {
+      "block": 9,
+      "count": 100,
+      "difficulty": {
+        "EASY": 16,
+        "NORMAL": 28,
+        "HARD": 28,
+        "EXPERT": 20,
+        "MASTER": 8
+      },
+      "boardSize": {
+        "5": 26,
+        "6": 74
+      }
+    },
+    {
+      "block": 10,
+      "count": 100,
+      "difficulty": {
+        "EASY": 16,
+        "NORMAL": 28,
+        "HARD": 28,
+        "EXPERT": 20,
+        "MASTER": 8
+      },
+      "boardSize": {
+        "5": 26,
+        "6": 74
+      }
+    }
+  ],
+  "solverMetrics": {
+    "acceptedOptimalMoveMin": 5,
+    "acceptedOptimalMoveMax": 13,
+    "acceptedExpandedStates": 40434,
+    "acceptedDiscoveredStates": 40434,
+    "acceptedOptimalSolutionCountSum": "1033"
+  },
+  "exactStageQueryCounts": {
+    "metricPrefilterCalls": 154424,
+    "shortestProbeCalls": 36588,
+    "canonicalProbeFingerprintLookups": 31188,
+    "fullCertificationCalls": 20865
+  },
+  "theoreticalNewPairObligations": "2719500",
+  "independentFullCorpusPairChecks": "5182590",
+  "expectedFullCorpusPairChecks": "5182590",
+  "newCollisions": 0,
+  "actualFullComparatorCalls": "5182590",
+  "performanceDiagnostics": {
+    "canonical": false,
+    "configuredHeapCapBytes": 536870912,
+    "sampledPeakHeapBytes": 96389280,
+    "checkpointCertificationReplayP50Millis": null,
+    "checkpointCertificationReplayP95Millis": null,
+    "checkpointReproductionMillis": 2.256,
+    "generatedThisRun": 1000,
+    "generationMillis": 1191533.89,
+    "independentVerifierMillis": 24189.134,
+    "totalRunMillis": 1216009.17
+  },
+  "toolingHash": "f496d62eb91a3c3b26ad00b4de24e253fa7db174a8c2956d720a51adcf5848ec",
+  "horizonBoardsBundled": false
+}
