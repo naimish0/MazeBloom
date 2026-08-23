@@ -22,15 +22,16 @@ MAZEBLOOM_VERSION_CODE=1
 MAZEBLOOM_VERSION_NAME=1.0
 ```
 
-The optional ad-supported build also requires three real, non-test identifiers:
+The optional ad-supported build also requires four real, non-test identifiers:
 
 ```properties
 MAZEBLOOM_ADMOB_APP_ID=ca-app-pub-0000000000000000~0000000000
+MAZEBLOOM_ADMOB_APP_OPEN_ID=ca-app-pub-0000000000000000/0000000000
 MAZEBLOOM_ADMOB_INTERSTITIAL_ID=ca-app-pub-0000000000000000/0000000000
 MAZEBLOOM_ADMOB_REWARDED_ID=ca-app-pub-0000000000000000/0000000000
 ```
 
-Local QA builds default to `https://naimish0.github.io/MazeBloom/`. A Play bundle requires `MAZEBLOOM_PRIVACY_POLICY_URL` to be set explicitly after that GitHub Pages URL (or another host) is live and verified.
+The project explicitly configures `MAZEBLOOM_PRIVACY_POLICY_URL=https://naimish0.github.io/MazeBloom/`, backed by `docs/index.html`. Verify that public URL immediately before a Play upload; override the property only if the policy moves to another public HTTPS host.
 
 ## Build and verify
 
@@ -70,7 +71,7 @@ Before promotion beyond internal testing:
 - Declare whether the release contains ads, complete the content-rating questionnaire, provide app-access instructions, and select the actual target audience. The current ad-supported implementation is for a non-child audience; do not select child age groups without implementing and validating Families-compliant age/ads handling first.
 - Create the store listing, feature graphic, phone/tablet screenshots, short/full descriptions, support email, and content classification.
 - Use an internal track first, then complete the required closed-testing and pre-launch-report review for the developer account.
-- Test the Play-generated split APK on at least one supported phone and one supported tablet, including offline play, process restoration, sharing, accessibility, and—if applicable—live consent, rewarded ads, and interstitial cadence.
+- Test the Play-generated split APK on at least one supported phone and one supported tablet, including offline play, process restoration, the celebration screenshot and Play Store share URL, accessibility, and—if applicable—live consent, rewarded action fallbacks, the immediate every-fifth-completion interstitial, its 60-second post-reward protection, and the persisted two-hour App Open cooldown.
 - Upload `mapping.txt` and retain Play vitals/crash/ANR monitoring ownership for every release.
 
 Production ad IDs, the upload key, AdMob privacy-message configuration, Play Console declarations, store assets, trademark clearance, and closed-testing approval are operator-owned external state and are intentionally not committed.

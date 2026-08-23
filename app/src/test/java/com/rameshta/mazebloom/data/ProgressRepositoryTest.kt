@@ -14,6 +14,20 @@ import org.junit.Test
 import kotlinx.coroutines.runBlocking
 
 class ProgressRepositoryTest {
+    @Test fun dailyCoinGrantCreditsOncePerForwardLocalDayAndRejectsRollback() = runBlocking {
+        val repository = InMemoryProgressRepository()
+        val firstDay = ObservedDate("2026-08-23", 20_688)
+
+        assertTrue(repository.claimDailyCoins(firstDay, 30))
+        assertEquals(30, repository.coinBalance())
+        assertFalse(repository.claimDailyCoins(firstDay, 30))
+        assertFalse(repository.claimDailyCoins(ObservedDate("2026-08-22", 20_687), 30))
+        assertEquals(30, repository.coinBalance())
+
+        assertTrue(repository.claimDailyCoins(ObservedDate("2026-08-24", 20_689), 30))
+        assertEquals(60, repository.coinBalance())
+    }
+
     @Test fun completionPreservesBestMovesAndNeverRevokesStars() = runBlocking {
         val repository = InMemoryProgressRepository()
         val level = level()

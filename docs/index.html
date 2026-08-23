@@ -187,7 +187,7 @@
           <div class="data-item"><strong>Game progress</strong>Completed and skipped levels, stars, best move counts, replays, unlocked content, coin balance, daily streaks, and an unfinished attempt.</div>
           <div class="data-item"><strong>Preferences</strong>Theme, sound, haptics, reduced motion, high contrast, and direction-control settings.</div>
           <div class="data-item"><strong>Endless Garden history</strong>Generated puzzle definitions, certification records, fingerprints, and local history used to avoid repeats.</div>
-          <div class="data-item"><strong>Reward integrity</strong>Random transaction identifiers for rewarded-ad callbacks, stored locally to prevent a reward from being applied twice.</div>
+          <div class="data-item"><strong>Daily rewards and ad controls</strong>The last local day credited with daily Coins, random rewarded-ad callback identifiers, the last completed rewarded-ad time, and the last confirmed App Open impression time. These values prevent duplicate rewards and enforce ad timing protections.</div>
         </div>
         <p>This data is stored in the app's private Android storage. It is not uploaded to the developer. Android cloud backup and device-transfer backup are disabled for MazeBloom so that its local puzzle history is not copied by the app's backup configuration.</p>
       </section>
@@ -196,6 +196,7 @@
         <h2>3. Optional advertising and consent services</h2>
         <p>The offline release does not package the Google Mobile Ads or UMP libraries and does not request internet, network-state, advertising-ID, or Privacy Sandbox ad permissions.</p>
         <p>If the ad-supported production build is installed, it uses Google Mobile Ads SDK 25.4.0 and UMP SDK 4.0.0. UMP refreshes consent information before the ads SDK is initialized or an ad is requested. Where required, UMP displays a consent message and a privacy-options entry is available in MazeBloom Settings.</p>
+        <p>This build may request an App Open ad when MazeBloom enters the foreground, with at least two hours between confirmed App Open impressions. A rewarded ad is requested only when you choose an insufficient-Coin Hint, Undo, or Skip action. A standard interstitial is attempted after every fifth first-time level completion, but is suppressed for 60 seconds after a rewarded ad is completed. Ads that are unavailable or cannot be shown do not block normal gameplay.</p>
         <p>Google states that its Mobile Ads SDK automatically collects and shares the following for advertising, analytics, and fraud prevention:</p>
         <ul>
           <li>IP address, which may be used to estimate general location;</li>
@@ -209,7 +210,7 @@
 
       <section id="sharing">
         <h2>4. Sharing a result</h2>
-        <p>When you choose Share, MazeBloom creates a puzzle-result image in its cache and opens Android's system share sheet. Nothing is shared until you select another app or destination. The selected service receives the image and short share text under that service's own privacy policy. MazeBloom does not receive the recipient list or a record of where you shared it.</p>
+        <p>When you choose Share, MazeBloom captures the visible celebration screen, writes a PNG image to its cache, and opens Android's system share sheet with that image and the MazeBloom Play Store URL. Nothing is shared until you select another app or destination. The selected service receives the image and share text under that service's own privacy policy. MazeBloom does not receive the recipient list or a record of where you shared it.</p>
       </section>
 
       <section id="permissions">
@@ -254,7 +255,9 @@
       <section id="contact">
         <h2>11. Developer and privacy contact</h2>
         <p>MazeBloom is developed and published by <strong>Naimish Gupta</strong>.</p>
-        <p>For privacy questions or requests, email <a href="mailto:naimishgupta983842377@gmail.com">naimishgupta983842377@gmail.com</a>. Please do not include sensitive personal information. Requests are reviewed and answered as required by applicable law.</p>
+        <p><strong>Email:</strong> <a href="mailto:naimish.app@gmail.com">naimish.app@gmail.com</a><br>
+        <strong>Postal address:</strong> Sandi, Hardoi, 241403, Uttar Pradesh</p>
+        <p>For privacy questions or requests, use the contact details above. Please do not include sensitive personal information. Requests are reviewed and answered as required by applicable law.</p>
       </section>
     </div>
   </main>

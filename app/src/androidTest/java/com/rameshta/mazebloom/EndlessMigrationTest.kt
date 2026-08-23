@@ -21,7 +21,7 @@ class EndlessMigrationTest {
         FrameworkSQLiteOpenHelperFactory(),
     )
 
-    @Test fun v2ToV6PreservesProgressCoinsAndUnlocksCompletedStarter() {
+    @Test fun v2ToV7PreservesProgressCoinsAndUnlocksCompletedStarter() {
         helper.createDatabase(NAME, 2).apply {
             execSQL("INSERT INTO campaign_state(id,currentLevelId,highestUnlockedCampaignOrder,legacyImportComplete,coins,pendingInterstitial,coinEconomyVersion) VALUES(1,'campaign-2000',2000,1,470,1,1)")
             execSQL("INSERT INTO daily_state(id,lastAdvancedLocalDate,lastAdvancedEpochDay,streak,lastCompletedEpochDay) VALUES(1,'',-9223372036854775808,0,-9223372036854775808)")
@@ -33,12 +33,13 @@ class EndlessMigrationTest {
         }
         val migrated = helper.runMigrationsAndValidate(
             NAME,
-            6,
+            7,
             true,
             MazeBloomDatabase.MIGRATION_2_3,
             MazeBloomDatabase.MIGRATION_3_4,
             MazeBloomDatabase.MIGRATION_4_5,
             MazeBloomDatabase.MIGRATION_5_6,
+            MazeBloomDatabase.MIGRATION_6_7,
         )
         migrated.query("SELECT coins,pendingInterstitial FROM campaign_state WHERE id=1").use { cursor ->
             cursor.moveToFirst()
@@ -56,6 +57,11 @@ class EndlessMigrationTest {
             cursor.moveToFirst()
             assertEquals(0, cursor.getInt(0))
         }
+        migrated.query("SELECT lastCoinGrantLocalDate,lastCoinGrantEpochDay FROM daily_state WHERE id=1").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals("", cursor.getString(0))
+            assertEquals(Long.MIN_VALUE, cursor.getLong(1))
+        }
         migrated.query("SELECT levelId FROM active_attempts ORDER BY levelId").use { cursor ->
             cursor.moveToFirst()
             assertEquals("campaign-002", cursor.getString(0))
@@ -70,7 +76,7 @@ class EndlessMigrationTest {
         migrated.close()
     }
 
-    @Test fun v1ToV6PreservesLegacyProgressAndUsesNonDestructiveMigrationChain() {
+    @Test fun v1ToV7PreservesLegacyProgressAndUsesNonDestructiveMigrationChain() {
         helper.createDatabase(LEGACY_NAME, 1).apply {
             execSQL("INSERT INTO campaign_state(id,currentLevelId,highestUnlockedCampaignOrder,legacyImportComplete) VALUES(1,'campaign-0042',42,1)")
             execSQL("INSERT INTO daily_state(id,lastAdvancedLocalDate,lastAdvancedEpochDay,streak,lastCompletedEpochDay) VALUES(1,'',-9223372036854775808,0,-9223372036854775808)")
@@ -79,13 +85,14 @@ class EndlessMigrationTest {
         }
         val migrated = helper.runMigrationsAndValidate(
             LEGACY_NAME,
-            6,
+            7,
             true,
             MazeBloomDatabase.MIGRATION_1_2,
             MazeBloomDatabase.MIGRATION_2_3,
             MazeBloomDatabase.MIGRATION_3_4,
             MazeBloomDatabase.MIGRATION_4_5,
             MazeBloomDatabase.MIGRATION_5_6,
+            MazeBloomDatabase.MIGRATION_6_7,
         )
         migrated.query("SELECT currentLevelId,highestUnlockedCampaignOrder,coins,pendingInterstitial FROM campaign_state WHERE id=1").use { cursor ->
             cursor.moveToFirst()

@@ -6,23 +6,27 @@ enum class ConsentState { NOT_REQUIRED, GRANTED, DENIED, UNAVAILABLE }
 
 interface AdsGateway {
     val enabled: Boolean
+    suspend fun showAppOpen(): AdResult
     suspend fun showInterstitial(): AdResult
     suspend fun showRewarded(onVerifiedReward: (String) -> Unit): AdResult
 }
 
 object NoOpAdsGateway : AdsGateway {
     override val enabled = false
+    override suspend fun showAppOpen() = AdResult.UNAVAILABLE
     override suspend fun showInterstitial() = AdResult.UNAVAILABLE
     override suspend fun showRewarded(onVerifiedReward: (String) -> Unit) = AdResult.UNAVAILABLE
 }
 
 class FakeAdsGateway(
     override val enabled: Boolean = true,
+    var appOpenResult: AdResult = AdResult.SHOWN,
     var interstitialResult: AdResult = AdResult.SHOWN,
     var rewardedResult: AdResult = AdResult.SHOWN,
 ) : AdsGateway {
     private val grantedTransactions = mutableSetOf<String>()
     private var rewardSequence = 0
+    override suspend fun showAppOpen() = appOpenResult
     override suspend fun showInterstitial() = interstitialResult
     override suspend fun showRewarded(onVerifiedReward: (String) -> Unit): AdResult {
         if (rewardedResult == AdResult.SHOWN) {
@@ -31,6 +35,21 @@ class FakeAdsGateway(
         }
         return rewardedResult
     }
+}
+
+object AppOpenAdPolicy {
+    const val COOLDOWN_MS = 2L * 60L * 60L * 1_000L
+
+    fun isCooldownElapsed(lastShownAtMs: Long, nowMs: Long): Boolean =
+        lastShownAtMs <= 0L || (nowMs >= lastShownAtMs && nowMs - lastShownAtMs >= COOLDOWN_MS)
+}
+
+object RewardedToInterstitialPolicy {
+    const val PROTECTION_MS = 60_000L
+
+    fun isProtected(lastRewardCompletedAtMs: Long, nowMs: Long): Boolean =
+        lastRewardCompletedAtMs > 0L &&
+            (nowMs < lastRewardCompletedAtMs || nowMs - lastRewardCompletedAtMs < PROTECTION_MS)
 }
 
 interface BillingGateway {

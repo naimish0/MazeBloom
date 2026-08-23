@@ -99,6 +99,7 @@ interface ProgressRepository {
     suspend fun dailyStreak(): Int
     suspend fun dailyHistory(): Set<String>
     suspend fun coinBalance(): Int
+    suspend fun claimDailyCoins(observedDate: ObservedDate, amount: Int): Boolean
     suspend fun spendCoins(amount: Int): Boolean
     suspend fun skipLevel(level: LevelDefinition)
     suspend fun takeInterstitialDue(): Boolean
@@ -239,6 +240,9 @@ class RoomProgressRepository(
     override suspend fun dailyStreak(): Int = io { dao.dailyState().streak }
     override suspend fun dailyHistory(): Set<String> = io { dao.dailyHistory().toSet() }
     override suspend fun coinBalance(): Int = io { dao.coinBalance() }
+    override suspend fun claimDailyCoins(observedDate: ObservedDate, amount: Int): Boolean = io {
+        dao.claimDailyCoins(observedDate.display, observedDate.epochDay, amount)
+    }
     override suspend fun spendCoins(amount: Int): Boolean = io {
         require(amount > 0)
         dao.spendCoins(amount) == 1
@@ -395,6 +399,7 @@ class InMemoryProgressRepository : ProgressRepository {
     private val history = linkedMapOf<String, Int>()
     private var streak = 0
     private var lastCompletedEpoch = Long.MIN_VALUE
+    private var lastDailyCoinGrantEpoch = Long.MIN_VALUE
     private var coins = 0
     private var highestUnlocked = 1
     private var pendingInterstitial = false
@@ -460,6 +465,13 @@ class InMemoryProgressRepository : ProgressRepository {
     override suspend fun dailyStreak() = streak
     override suspend fun dailyHistory(): Set<String> = history.keys.toSet()
     override suspend fun coinBalance(): Int = coins
+    override suspend fun claimDailyCoins(observedDate: ObservedDate, amount: Int): Boolean {
+        require(amount > 0)
+        if (observedDate.epochDay <= lastDailyCoinGrantEpoch) return false
+        lastDailyCoinGrantEpoch = observedDate.epochDay
+        coins += amount
+        return true
+    }
     override suspend fun spendCoins(amount: Int): Boolean {
         require(amount > 0)
         if (coins < amount) return false

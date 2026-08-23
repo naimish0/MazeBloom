@@ -190,6 +190,8 @@ data class DailyStateEntity(
     val lastAdvancedEpochDay: Long = Long.MIN_VALUE,
     val streak: Int = 0,
     val lastCompletedEpochDay: Long = Long.MIN_VALUE,
+    val lastCoinGrantLocalDate: String = "",
+    val lastCoinGrantEpochDay: Long = Long.MIN_VALUE,
 )
 
 @Dao
@@ -214,6 +216,23 @@ abstract class MazeBloomDao {
 
     @Query("UPDATE campaign_state SET coins = coins - :amount WHERE id = 1 AND coins >= :amount")
     abstract fun spendCoins(amount: Int): Int
+
+    @Query(
+        """
+        UPDATE daily_state SET lastCoinGrantLocalDate = :localDate,
+          lastCoinGrantEpochDay = :epochDay WHERE id = 1
+        """,
+    )
+    abstract fun markDailyCoinGrant(localDate: String, epochDay: Long)
+
+    @Transaction
+    open fun claimDailyCoins(localDate: String, epochDay: Long, amount: Int): Boolean {
+        require(amount > 0)
+        if (epochDay <= dailyState().lastCoinGrantEpochDay) return false
+        markDailyCoinGrant(localDate, epochDay)
+        creditCoins(amount)
+        return true
+    }
 
     @Query("SELECT (SELECT COUNT(*) FROM level_progress) + (SELECT COUNT(*) FROM daily_completions)")
     abstract fun completedLevelCount(): Int
@@ -569,7 +588,7 @@ abstract class MazeBloomDao {
         UniquenessRecordEntity::class,
         GenerationCheckpointEntity::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 abstract class MazeBloomDatabase : RoomDatabase() {
@@ -583,7 +602,10 @@ abstract class MazeBloomDatabase : RoomDatabase() {
                 context.applicationContext,
                 MazeBloomDatabase::class.java,
                 "mazebloom.db",
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6).build().also { database ->
+            ).addMigrations(
+                MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
+                MIGRATION_5_6, MIGRATION_6_7,
+            ).build().also { database ->
                 instance = database
             }
         }
@@ -670,6 +692,14 @@ abstract class MazeBloomDatabase : RoomDatabase() {
                 } else {
                     db.execSQL("UPDATE auto_progressive_state SET generationState='BASELINE_MISMATCH', terminalReason='Generated history uses the retired pre-Campaign-6 profile-v3 baseline'")
                 }
+            }
+        }
+
+        /** Adds durable, rollback-resistant bookkeeping for the once-per-local-day coin grant. */
+        val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE daily_state ADD COLUMN lastCoinGrantLocalDate TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE daily_state ADD COLUMN lastCoinGrantEpochDay INTEGER NOT NULL DEFAULT -9223372036854775808")
             }
         }
     }

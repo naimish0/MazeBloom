@@ -924,17 +924,25 @@ private fun GameControls(state: MazeBloomUiState, model: MazeBloomViewModel, sta
         if (state.adActionStatus == AdActionStatus.UNAVAILABLE) {
             Text(stringResource(R.string.ad_unavailable), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
         }
-        if (state.settings.directionButtons) DirectionPad(model::move, enabled = !state.presentingTransition && state.gameState?.status == GameStatus.ACTIVE)
+        if (state.settings.directionButtons) DirectionPad(model::move, enabled = !state.presentingTransition && !state.economyActionInFlight && state.gameState?.status == GameStatus.ACTIVE)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = model::undo, enabled = state.canUndo, modifier = Modifier.weight(1f).height(52.dp), shape = BloomSmallShape) {
-                Text("↶ ${stringResource(R.string.undo)}", style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center)
+            OutlinedButton(onClick = model::undo, enabled = state.canUndo && !state.presentingTransition && !state.economyActionInFlight, modifier = Modifier.weight(1f).height(52.dp), shape = BloomSmallShape) {
+                Text(
+                    "↶ " + when {
+                        state.adActionStatus == AdActionStatus.LOADING -> stringResource(R.string.ad_loading)
+                        state.coinBalance >= MazeBloomViewModel.UNDO_COST -> stringResource(R.string.undo_coin_cost, MazeBloomViewModel.UNDO_COST)
+                        else -> stringResource(R.string.undo_ad)
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                    textAlign = TextAlign.Center,
+                )
             }
-            OutlinedButton(onClick = model::restart, modifier = Modifier.weight(1f).height(52.dp), shape = BloomSmallShape) {
+            OutlinedButton(onClick = model::restart, enabled = !state.economyActionInFlight, modifier = Modifier.weight(1f).height(52.dp), shape = BloomSmallShape) {
                 Text("↻ ${stringResource(R.string.restart)}", style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center)
             }
             OutlinedButton(
                 onClick = { model.requestHint() },
-                enabled = state.gameState?.status == GameStatus.ACTIVE && state.adActionStatus != AdActionStatus.LOADING,
+                enabled = state.gameState?.status == GameStatus.ACTIVE && !state.economyActionInFlight,
                 modifier = Modifier.weight(1f).height(52.dp),
                 shape = BloomSmallShape,
             ) {
@@ -952,10 +960,19 @@ private fun GameControls(state: MazeBloomUiState, model: MazeBloomViewModel, sta
         if (!state.isDaily && (state.isProgressive || state.gameLevel?.campaignOrder in 1 until 2_000) && state.gameState?.status != GameStatus.SOLVED) {
             OutlinedButton(
                 onClick = model::skipLevel,
-                enabled = state.adActionStatus != AdActionStatus.LOADING,
+                enabled = !state.economyActionInFlight,
                 modifier = Modifier.fillMaxWidth().height(50.dp),
                 shape = BloomSmallShape,
-            ) { Text(stringResource(R.string.skip_level_ad), style = MaterialTheme.typography.labelLarge) }
+            ) {
+                Text(
+                    when {
+                        state.adActionStatus == AdActionStatus.LOADING -> stringResource(R.string.ad_loading)
+                        state.coinBalance >= MazeBloomViewModel.SKIP_LEVEL_COST -> stringResource(R.string.skip_level_coin_cost, MazeBloomViewModel.SKIP_LEVEL_COST)
+                        else -> stringResource(R.string.skip_level_ad)
+                    },
+                    style = MaterialTheme.typography.labelLarge,
+                )
+            }
         }
         if (stars != null && state.gameState?.status != GameStatus.SOLVED) Text(stringResource(R.string.best_stars, stars), color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

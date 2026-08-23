@@ -1,5 +1,7 @@
 package com.rameshta.mazebloom.services
 
+import android.content.Context
+import android.os.SystemClock
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.lifecycle.DefaultLifecycleObserver
@@ -10,6 +12,7 @@ import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
+import com.google.android.gms.ads.appopen.AppOpenAd
 import com.google.android.gms.ads.interstitial.InterstitialAd
 import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback
 import com.google.android.gms.ads.rewarded.RewardedAd
@@ -37,21 +40,27 @@ import kotlin.coroutines.resume
  */
 class GoogleMobileAdsGateway(
     private val activity: ComponentActivity,
+    private val appOpenAdUnitId: String,
     private val interstitialAdUnitId: String,
     private val rewardedAdUnitId: String,
 ) : AdsGateway, ConsentGateway, DefaultLifecycleObserver, AutoCloseable {
-    override val enabled = interstitialAdUnitId.isNotBlank() && rewardedAdUnitId.isNotBlank()
+    override val enabled = appOpenAdUnitId.isNotBlank() && interstitialAdUnitId.isNotBlank() && rewardedAdUnitId.isNotBlank()
     private val consentInformation = UserMessagingPlatform.getConsentInformation(activity)
+    private val cooldownPreferences = activity.getSharedPreferences(APP_OPEN_PREFERENCES, Context.MODE_PRIVATE)
     override val privacyOptionsRequired: Boolean
         get() = consentInformation.privacyOptionsRequirementStatus ==
             ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val presentationMutex = Mutex()
+    private val appOpenLoadMutex = Mutex()
     private val interstitialLoadMutex = Mutex()
     private val rewardedLoadMutex = Mutex()
+    private var appOpenAd: AppOpenAd? = null
+    private var appOpenLoadedAtElapsedMs = 0L
     private var interstitialAd: InterstitialAd? = null
     private var rewardedAd: RewardedAd? = null
+    private var lastFullScreenDismissedAtElapsedMs = 0L
     private val readiness = CompletableDeferred<Boolean>()
 
     init {
@@ -61,17 +70,39 @@ class GoogleMobileAdsGateway(
             Log.i(TAG, "Initialization ${if (ready) "ready" else "unavailable"}; consent=${consentInformation.consentStatus}")
             readiness.complete(ready)
             if (ready) {
+                launch { ensureAppOpenLoaded() }
                 launch { ensureInterstitialLoaded() }
                 launch { ensureRewardedLoaded() }
             }
         }
     }
 
-    override suspend fun showInterstitial(): AdResult = presentExclusively {
-        if (!awaitReady()) return@presentExclusively AdResult.UNAVAILABLE
-        val ad = ensureInterstitialLoaded() ?: return@presentExclusively AdResult.UNAVAILABLE
-        interstitialAd = null
-        presentInterstitial(ad).also { scope.launch { ensureInterstitialLoaded() } }
+    override suspend fun showAppOpen(): AdResult {
+        if (!isAppOpenCooldownElapsed()) return AdResult.UNAVAILABLE
+        return presentExclusively {
+            if (!isAppOpenCooldownElapsed() || wasFullScreenAdJustDismissed()) {
+                return@presentExclusively AdResult.UNAVAILABLE
+            }
+            val ad = withTimeoutOrNull(APP_OPEN_FOREGROUND_TIMEOUT_MS) {
+                if (!awaitReady()) null else ensureAppOpenLoaded()
+            } ?: return@presentExclusively AdResult.UNAVAILABLE
+            if (!canPresentNow()) return@presentExclusively AdResult.UNAVAILABLE
+            appOpenAd = null
+            appOpenLoadedAtElapsedMs = 0L
+            presentAppOpen(ad).also { scope.launch { ensureAppOpenLoaded() } }
+        }
+    }
+
+    override suspend fun showInterstitial(): AdResult {
+        if (isRewardedToInterstitialProtectionActive()) return AdResult.UNAVAILABLE
+        return presentExclusively {
+            if (isRewardedToInterstitialProtectionActive() || !awaitReady()) {
+                return@presentExclusively AdResult.UNAVAILABLE
+            }
+            val ad = ensureInterstitialLoaded() ?: return@presentExclusively AdResult.UNAVAILABLE
+            interstitialAd = null
+            presentInterstitial(ad).also { scope.launch { ensureInterstitialLoaded() } }
+        }
     }
 
     override suspend fun showRewarded(onVerifiedReward: (String) -> Unit): AdResult = presentExclusively {
@@ -104,9 +135,7 @@ class GoogleMobileAdsGateway(
 
     private suspend fun presentExclusively(block: suspend () -> AdResult): AdResult =
         withContext(Dispatchers.Main.immediate) {
-            if (!enabled || activity.isFinishing || activity.isDestroyed ||
-                !activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
-            ) return@withContext AdResult.UNAVAILABLE
+            if (!canPresentNow()) return@withContext AdResult.UNAVAILABLE
             if (!presentationMutex.tryLock()) return@withContext AdResult.UNAVAILABLE
             try {
                 block()
@@ -116,6 +145,38 @@ class GoogleMobileAdsGateway(
                 presentationMutex.unlock()
             }
         }
+
+    private fun canPresentNow(): Boolean =
+        enabled && !activity.isFinishing && !activity.isDestroyed &&
+            activity.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+
+    private fun isAppOpenCooldownElapsed(): Boolean = AppOpenAdPolicy.isCooldownElapsed(
+        lastShownAtMs = cooldownPreferences.getLong(APP_OPEN_LAST_SHOWN_AT, 0L),
+        nowMs = System.currentTimeMillis(),
+    )
+
+    private fun isRewardedToInterstitialProtectionActive(): Boolean =
+        RewardedToInterstitialPolicy.isProtected(
+            lastRewardCompletedAtMs = cooldownPreferences.getLong(LAST_REWARDED_COMPLETED_AT, 0L),
+            nowMs = System.currentTimeMillis(),
+        )
+
+    private fun markRewardedCompleted() {
+        cooldownPreferences.edit()
+            .putLong(LAST_REWARDED_COMPLETED_AT, System.currentTimeMillis())
+            .apply()
+    }
+
+    private fun wasFullScreenAdJustDismissed(): Boolean {
+        val dismissedAt = lastFullScreenDismissedAtElapsedMs
+        if (dismissedAt <= 0L) return false
+        val elapsed = SystemClock.elapsedRealtime() - dismissedAt
+        return elapsed in 0 until FULL_SCREEN_DISMISS_GUARD_MS
+    }
+
+    private fun markFullScreenDismissed() {
+        lastFullScreenDismissedAtElapsedMs = SystemClock.elapsedRealtime()
+    }
 
     private suspend fun awaitReady(): Boolean =
         withTimeoutOrNull(INITIALIZATION_TIMEOUT_MS) { readiness.await() } == true
@@ -150,6 +211,21 @@ class GoogleMobileAdsGateway(
         }
     }
 
+    private suspend fun ensureAppOpenLoaded(): AppOpenAd? = appOpenLoadMutex.withLock {
+        val now = SystemClock.elapsedRealtime()
+        appOpenAd?.takeIf {
+            val age = now - appOpenLoadedAtElapsedMs
+            age in 0 until APP_OPEN_MAX_CACHE_AGE_MS
+        } ?: run {
+            appOpenAd = null
+            appOpenLoadedAtElapsedMs = 0L
+            withTimeoutOrNull(AD_LOAD_TIMEOUT_MS) { loadAppOpen() }?.also {
+                appOpenAd = it
+                appOpenLoadedAtElapsedMs = SystemClock.elapsedRealtime()
+            }
+        }
+    }
+
     private suspend fun ensureInterstitialLoaded(): InterstitialAd? = interstitialLoadMutex.withLock {
         interstitialAd ?: withTimeoutOrNull(AD_LOAD_TIMEOUT_MS) { loadInterstitial() }
             ?.also { interstitialAd = it }
@@ -158,6 +234,27 @@ class GoogleMobileAdsGateway(
     private suspend fun ensureRewardedLoaded(): RewardedAd? = rewardedLoadMutex.withLock {
         rewardedAd ?: withTimeoutOrNull(AD_LOAD_TIMEOUT_MS) { loadRewarded() }
             ?.also { rewardedAd = it }
+    }
+
+    private suspend fun loadAppOpen(): AppOpenAd? = withContext(Dispatchers.Main.immediate) {
+        suspendCancellableCoroutine { continuation ->
+            AppOpenAd.load(
+                activity.applicationContext,
+                appOpenAdUnitId,
+                AdRequest.Builder().build(),
+                object : AppOpenAd.AppOpenAdLoadCallback() {
+                    override fun onAdLoaded(ad: AppOpenAd) {
+                        Log.d(TAG, "App Open loaded")
+                        if (continuation.isActive) continuation.resume(ad)
+                    }
+
+                    override fun onAdFailedToLoad(error: LoadAdError) {
+                        Log.w(TAG, "App Open load failed (${error.code}/${error.domain}): ${error.message}")
+                        if (continuation.isActive) continuation.resume(null)
+                    }
+                },
+            )
+        }
     }
 
     private suspend fun loadInterstitial(): InterstitialAd? = withContext(Dispatchers.Main.immediate) {
@@ -210,11 +307,39 @@ class GoogleMobileAdsGateway(
             ad.fullScreenContentCallback = object : FullScreenContentCallback() {
                 override fun onAdDismissedFullScreenContent() {
                     Log.d(TAG, "Interstitial dismissed")
+                    markFullScreenDismissed()
                     finish(AdResult.SHOWN)
                 }
 
                 override fun onAdFailedToShowFullScreenContent(error: AdError) {
                     Log.w(TAG, "Interstitial show failed (${error.code}/${error.domain}): ${error.message}")
+                    finish(AdResult.FAILED)
+                }
+            }
+            runCatching { ad.show(activity) }.onFailure { finish(AdResult.FAILED) }
+        }
+
+    private suspend fun presentAppOpen(ad: AppOpenAd): AdResult =
+        suspendCancellableCoroutine { continuation ->
+            fun finish(result: AdResult) {
+                if (continuation.isActive) continuation.resume(result)
+            }
+            ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+                override fun onAdShowedFullScreenContent() {
+                    cooldownPreferences.edit()
+                        .putLong(APP_OPEN_LAST_SHOWN_AT, System.currentTimeMillis())
+                        .apply()
+                    Log.d(TAG, "App Open shown; cooldown started")
+                }
+
+                override fun onAdDismissedFullScreenContent() {
+                    Log.d(TAG, "App Open dismissed")
+                    markFullScreenDismissed()
+                    finish(AdResult.SHOWN)
+                }
+
+                override fun onAdFailedToShowFullScreenContent(error: AdError) {
+                    Log.w(TAG, "App Open show failed (${error.code}/${error.domain}): ${error.message}")
                     finish(AdResult.FAILED)
                 }
             }
@@ -232,6 +357,8 @@ class GoogleMobileAdsGateway(
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
             override fun onAdDismissedFullScreenContent() {
                 Log.d(TAG, "Rewarded dismissed; rewardDelivered=$rewardDelivered")
+                if (rewardDelivered) markRewardedCompleted()
+                markFullScreenDismissed()
                 finish(AdResult.SHOWN)
             }
 
@@ -244,6 +371,7 @@ class GoogleMobileAdsGateway(
             ad.show(activity) {
                 if (!rewardDelivered) {
                     rewardDelivered = true
+                    markRewardedCompleted()
                     Log.d(TAG, "Reward callback verified")
                     onVerifiedReward("admob-reward-${UUID.randomUUID()}")
                 }
@@ -257,6 +385,8 @@ class GoogleMobileAdsGateway(
         activity.lifecycle.removeObserver(this)
         scope.cancel()
         if (!readiness.isCompleted) readiness.complete(false)
+        appOpenAd = null
+        appOpenLoadedAtElapsedMs = 0L
         interstitialAd = null
         rewardedAd = null
     }
@@ -265,5 +395,11 @@ class GoogleMobileAdsGateway(
         private const val TAG = "MazeBloomAds"
         private const val INITIALIZATION_TIMEOUT_MS = 35_000L
         private const val AD_LOAD_TIMEOUT_MS = 20_000L
+        private const val APP_OPEN_FOREGROUND_TIMEOUT_MS = 5_000L
+        private const val APP_OPEN_MAX_CACHE_AGE_MS = 4L * 60L * 60L * 1_000L
+        private const val FULL_SCREEN_DISMISS_GUARD_MS = 10_000L
+        private const val APP_OPEN_PREFERENCES = "mazebloom_app_open_ads"
+        private const val APP_OPEN_LAST_SHOWN_AT = "last_shown_at_ms"
+        private const val LAST_REWARDED_COMPLETED_AT = "last_rewarded_completed_at_ms"
     }
 }
