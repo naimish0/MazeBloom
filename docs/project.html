@@ -1,0 +1,924 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MazeBloom is an offline botanical puzzle game for Android. Swipe through every Bud while every path you leave Blooms into a wall.">
+  <meta name="author" content="Naimish Gupta">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#173f31">
+  <meta name="color-scheme" content="light dark">
+  <meta name="referrer" content="no-referrer">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="MazeBloom — Every move leaves a bloom">
+  <meta property="og:description" content="A calm, clever botanical puzzle game with 2,000 certified campaign levels, an offline Daily Bloom, and a private on-device Endless Garden.">
+  <meta property="og:url" content="https://naimish0.github.io/MazeBloom/project.html">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="MazeBloom — Botanical puzzles for Android">
+  <meta name="twitter:description" content="Swipe through every Bud. Every path you leave Blooms into a wall.">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests">
+  <link rel="canonical" href="https://naimish0.github.io/MazeBloom/project.html">
+  <title>MazeBloom — Botanical Puzzle Game for Android</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --canvas: #f5f0df;
+      --canvas-deep: #eadfbf;
+      --surface: #fffaf0;
+      --surface-soft: #e8efe1;
+      --surface-strong: #d7e4cf;
+      --ink: #17362a;
+      --muted: #5b6b62;
+      --fern: #2f6b4f;
+      --fern-dark: #173f31;
+      --fern-soft: #cfe1c7;
+      --terracotta: #c96d4c;
+      --gold: #d99a32;
+      --berry: #b95f77;
+      --line: #bdcdbf;
+      --shadow: 0 24px 70px rgba(34, 65, 49, .13);
+      --shadow-soft: 0 12px 36px rgba(34, 65, 49, .09);
+      --radius-xl: 2rem;
+      --radius-lg: 1.4rem;
+      --radius-md: 1rem;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      overflow-x: hidden;
+      background:
+        radial-gradient(circle at 8% 3%, rgba(184, 213, 154, .38), transparent 28rem),
+        radial-gradient(circle at 93% 18%, rgba(217, 154, 50, .16), transparent 24rem),
+        linear-gradient(180deg, var(--canvas), #f8f5ea 48%, var(--canvas));
+      color: var(--ink);
+      font-family: ui-rounded, "SF Pro Rounded", "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+      font-size: 1rem;
+      line-height: 1.65;
+    }
+
+    a { color: inherit; text-underline-offset: .2em; }
+    a:hover { text-decoration-thickness: .14em; }
+    a:focus-visible, summary:focus-visible {
+      outline: 3px solid var(--terracotta);
+      outline-offset: 4px;
+      border-radius: .35rem;
+    }
+    button, a { -webkit-tap-highlight-color: transparent; }
+
+    .skip-link {
+      position: fixed;
+      z-index: 50;
+      top: .75rem;
+      left: .75rem;
+      transform: translateY(-180%);
+      padding: .75rem 1rem;
+      border-radius: .7rem;
+      background: var(--ink);
+      color: var(--surface);
+    }
+    .skip-link:focus { transform: translateY(0); }
+
+    .shell { width: min(100% - 2rem, 74rem); margin-inline: auto; }
+    .site-header {
+      position: relative;
+      z-index: 10;
+      padding: 1.1rem 0;
+    }
+    .nav-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.25rem;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: .72rem;
+      color: var(--ink);
+      font-size: 1.08rem;
+      font-weight: 850;
+      letter-spacing: -.02em;
+      text-decoration: none;
+    }
+    .brand-mark {
+      position: relative;
+      display: inline-grid;
+      width: 2.45rem;
+      height: 2.45rem;
+      place-items: center;
+      overflow: hidden;
+      border: 1px solid rgba(47, 107, 79, .18);
+      border-radius: .82rem;
+      background: #fff4d5;
+      box-shadow: 0 6px 16px rgba(49, 95, 73, .15);
+    }
+    .brand-mark::before {
+      width: 1.35rem;
+      height: 1.45rem;
+      border-radius: 48% 52% 45% 55%;
+      background: #315f49;
+      content: "";
+      transform: rotate(-8deg);
+    }
+    .brand-mark::after {
+      position: absolute;
+      width: .78rem;
+      height: .42rem;
+      top: .35rem;
+      right: .28rem;
+      border-radius: 100% 0 100% 0;
+      background: #b8d59a;
+      content: "";
+      transform: rotate(-16deg);
+    }
+    .brand-dot {
+      position: absolute;
+      width: .35rem;
+      height: .35rem;
+      left: .75rem;
+      top: 1.12rem;
+      border: .12rem solid #f6ecd0;
+      border-radius: 50%;
+      background: var(--gold);
+    }
+    .nav-links { display: flex; align-items: center; gap: 1.4rem; }
+    .nav-links a {
+      color: var(--muted);
+      font-size: .9rem;
+      font-weight: 720;
+      text-decoration: none;
+    }
+    .nav-links a:hover { color: var(--fern); }
+    .nav-cta {
+      padding: .62rem .95rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--surface) 86%, transparent);
+    }
+
+    .hero {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(19rem, .92fr);
+      gap: clamp(2rem, 7vw, 6.5rem);
+      min-height: 44rem;
+      padding: clamp(3.7rem, 8vw, 7.5rem) 0 5rem;
+      align-items: center;
+    }
+    .hero-copy { position: relative; z-index: 2; }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: .5rem;
+      margin: 0 0 1.1rem;
+      color: var(--fern);
+      font-size: .78rem;
+      font-weight: 900;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+    .eyebrow::before {
+      width: .55rem;
+      height: .55rem;
+      border-radius: 100% 0 100% 0;
+      background: var(--terracotta);
+      content: "";
+      transform: rotate(-35deg);
+    }
+    h1, h2, h3 { line-height: 1.12; text-wrap: balance; }
+    h1 {
+      max-width: 10ch;
+      margin: 0;
+      font-size: clamp(3.35rem, 8.2vw, 6.8rem);
+      letter-spacing: -.07em;
+    }
+    .hero-lede {
+      max-width: 41rem;
+      margin: 1.5rem 0 0;
+      color: var(--muted);
+      font-size: clamp(1.12rem, 2vw, 1.3rem);
+    }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: .8rem; margin-top: 2rem; }
+    .button {
+      display: inline-flex;
+      min-height: 3.35rem;
+      align-items: center;
+      justify-content: center;
+      gap: .7rem;
+      padding: .8rem 1.2rem;
+      border: 1px solid transparent;
+      border-radius: .95rem;
+      font-weight: 820;
+      text-decoration: none;
+      transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+    }
+    .button:hover { transform: translateY(-2px); }
+    .button-primary {
+      background: var(--fern-dark);
+      color: #fffaf0;
+      box-shadow: 0 12px 26px rgba(23, 63, 49, .25);
+    }
+    .button-primary::before {
+      width: 0;
+      height: 0;
+      border-top: .38rem solid transparent;
+      border-bottom: .38rem solid transparent;
+      border-left: .62rem solid #b8d59a;
+      content: "";
+    }
+    .button-secondary { border-color: var(--line); background: var(--surface); color: var(--ink); }
+    .hero-meta { display: flex; flex-wrap: wrap; gap: .6rem; margin-top: 1.65rem; }
+    .chip {
+      padding: .44rem .72rem;
+      border: 1px solid color-mix(in srgb, var(--line) 82%, transparent);
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--surface) 76%, transparent);
+      color: var(--muted);
+      font-size: .82rem;
+      font-weight: 720;
+    }
+
+    .hero-art { position: relative; min-height: 42rem; display: grid; place-items: center; }
+    .hero-art::before {
+      position: absolute;
+      width: min(40rem, 120%);
+      aspect-ratio: 1;
+      border-radius: 46% 54% 60% 40% / 50% 38% 62% 50%;
+      background: linear-gradient(145deg, rgba(207, 225, 199, .82), rgba(255, 250, 240, .35));
+      content: "";
+      transform: rotate(8deg);
+    }
+    .petal {
+      position: absolute;
+      z-index: 1;
+      width: 3.8rem;
+      height: 6.5rem;
+      border-radius: 100% 0 100% 0;
+      background: rgba(201, 109, 76, .18);
+      transform: rotate(var(--r));
+    }
+    .petal-one { --r: 28deg; top: 4%; right: 3%; }
+    .petal-two { --r: -52deg; bottom: 12%; left: -4%; background: rgba(47, 107, 79, .16); }
+    .petal-three { --r: 83deg; top: 28%; left: -9%; width: 2.6rem; height: 4.4rem; background: rgba(217, 154, 50, .2); }
+
+    .phone {
+      position: relative;
+      z-index: 2;
+      width: min(20.8rem, 88vw);
+      padding: .62rem;
+      border: .18rem solid #183a2d;
+      border-radius: 2.7rem;
+      background: #10251c;
+      box-shadow: 0 38px 80px rgba(25, 57, 43, .28), inset 0 0 0 1px rgba(255,255,255,.18);
+      transform: rotate(2.2deg);
+    }
+    .phone::before {
+      position: absolute;
+      z-index: 5;
+      width: 5.6rem;
+      height: 1.15rem;
+      top: .47rem;
+      left: 50%;
+      border-radius: 0 0 .85rem .85rem;
+      background: #10251c;
+      content: "";
+      transform: translateX(-50%);
+    }
+    .phone-screen {
+      min-height: 38rem;
+      overflow: hidden;
+      border-radius: 2.12rem;
+      background:
+        radial-gradient(circle at 8% 2%, rgba(184, 213, 154, .22), transparent 14rem),
+        #f7f3e8;
+      color: #1e2b24;
+    }
+    .phone-status {
+      display: flex;
+      height: 2.2rem;
+      align-items: center;
+      justify-content: space-between;
+      padding: .42rem 1.15rem 0;
+      font-size: .62rem;
+      font-weight: 800;
+    }
+    .signal { letter-spacing: .08em; }
+    .game-top { display: flex; align-items: center; justify-content: space-between; padding: .7rem 1.05rem .4rem; }
+    .back-dot { display: grid; width: 2rem; height: 2rem; place-items: center; border: 1px solid #cbd8cb; border-radius: .7rem; color: #315f49; font-size: 1rem; }
+    .coin-pill { padding: .34rem .64rem; border-radius: 999px; background: #fffaf0; color: #315f49; font-size: .67rem; font-weight: 850; box-shadow: 0 4px 12px rgba(30,43,36,.08); }
+    .game-copy { padding: .4rem 1.05rem .75rem; }
+    .game-kicker { color: #657168; font-size: .58rem; font-weight: 850; letter-spacing: .11em; text-transform: uppercase; }
+    .game-level-title { margin: .18rem 0 0; font-size: 1.1rem; font-weight: 800; letter-spacing: -.03em; line-height: 1.12; }
+    .game-stats { display: flex; gap: .85rem; margin-top: .48rem; color: #657168; font-size: .65rem; font-weight: 720; }
+    .board-wrap { margin: .35rem .82rem .7rem; padding: .72rem; border: 1px solid #d6dccf; border-radius: 1.35rem; background: #fffdf7; box-shadow: 0 10px 26px rgba(30,43,36,.08); }
+    .board { display: grid; grid-template-columns: repeat(6, 1fr); gap: .28rem; padding: .34rem; border-radius: .9rem; background: #dcebd8; }
+    .tile {
+      position: relative;
+      aspect-ratio: 1;
+      border-radius: .38rem;
+      background: #f8f3df;
+      box-shadow: inset 0 0 0 1px rgba(49,95,73,.07);
+    }
+    .tile.stone { background: linear-gradient(145deg, #708078, #53645c); box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+    .tile.bloom { background: linear-gradient(145deg, #70a978, #4d845f); }
+    .tile.bloom::before, .tile.bloom::after {
+      position: absolute;
+      width: 42%;
+      height: 58%;
+      left: 29%;
+      top: 21%;
+      border-radius: 100% 0 100% 0;
+      background: #b8d59a;
+      content: "";
+      transform: rotate(45deg);
+    }
+    .tile.bloom::after { transform: rotate(135deg); opacity: .82; }
+    .tile.bud::before {
+      position: absolute;
+      width: 48%;
+      height: 48%;
+      left: 26%;
+      top: 25%;
+      border: .12rem solid #f7e8b7;
+      border-radius: 50% 50% 48% 52%;
+      background: #d99a32;
+      box-shadow: .22rem -.14rem 0 -.06rem #c96d4c, -.18rem .18rem 0 -.06rem #c96d4c;
+      content: "";
+    }
+    .tile.seed::before {
+      position: absolute;
+      width: 58%;
+      height: 64%;
+      left: 21%;
+      top: 19%;
+      border-radius: 52% 48% 48% 52%;
+      background: #315f49;
+      box-shadow: 0 .16rem .32rem rgba(30,43,36,.2);
+      content: "";
+    }
+    .tile.seed::after {
+      position: absolute;
+      width: 31%;
+      height: 18%;
+      top: 14%;
+      right: 12%;
+      border-radius: 100% 0 100% 0;
+      background: #b8d59a;
+      content: "";
+      transform: rotate(-16deg);
+    }
+    .hint-line { display: flex; align-items: center; gap: .5rem; margin: 0 .95rem .7rem; padding: .62rem .75rem; border-radius: .85rem; background: #e7efe1; color: #315f49; font-size: .65rem; font-weight: 730; }
+    .hint-line span { display: grid; width: 1.35rem; height: 1.35rem; place-items: center; border-radius: .45rem; background: #315f49; color: #fff; }
+    .controls { display: grid; grid-template-columns: 1fr .88fr 1fr; gap: .36rem; padding: 0 .82rem .85rem; }
+    .control { padding: .56rem .2rem; border: 1px solid #ced8cd; border-radius: .72rem; background: #fffaf0; text-align: center; font-size: .6rem; font-weight: 820; }
+    .control.primary { border-color: #315f49; background: #315f49; color: #fffaf0; }
+    .gesture-bar { width: 5.5rem; height: .24rem; margin: .15rem auto .45rem; border-radius: 99px; background: #87968d; }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      margin: 0 auto;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: color-mix(in srgb, var(--surface) 86%, transparent);
+      box-shadow: var(--shadow-soft);
+    }
+    .stat { padding: 1.45rem 1rem; text-align: center; }
+    .stat + .stat { border-left: 1px solid var(--line); }
+    .stat strong { display: block; color: var(--fern-dark); font-size: clamp(1.35rem, 3vw, 2rem); line-height: 1.1; letter-spacing: -.035em; }
+    .stat span { color: var(--muted); font-size: .78rem; font-weight: 740; }
+
+    section { scroll-margin-top: 1.5rem; }
+    .section { padding: clamp(5rem, 9vw, 8rem) 0; }
+    .section-head { max-width: 44rem; margin-bottom: 2.25rem; }
+    .section-label { margin: 0 0 .65rem; color: var(--terracotta); font-size: .75rem; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+    h2 { margin: 0; font-size: clamp(2.35rem, 5vw, 4.3rem); letter-spacing: -.055em; }
+    .section-intro { margin: 1rem 0 0; color: var(--muted); font-size: 1.08rem; }
+
+    .rule-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; counter-reset: rule; }
+    .rule-card {
+      position: relative;
+      min-height: 17rem;
+      overflow: hidden;
+      padding: 1.6rem;
+      border: 1px solid var(--line);
+      border-radius: var(--radius-lg);
+      background: var(--surface);
+      box-shadow: var(--shadow-soft);
+      counter-increment: rule;
+    }
+    .rule-card::after {
+      position: absolute;
+      right: -.2rem;
+      bottom: -2rem;
+      color: color-mix(in srgb, var(--fern-soft) 72%, transparent);
+      content: "0" counter(rule);
+      font-size: 7rem;
+      font-weight: 900;
+      letter-spacing: -.08em;
+      line-height: 1;
+    }
+    .rule-icon { display: grid; width: 3rem; height: 3rem; place-items: center; border-radius: 1rem; background: var(--surface-soft); color: var(--fern); font-size: 1.25rem; font-weight: 900; }
+    .rule-card h3 { position: relative; z-index: 1; margin: 1.25rem 0 .55rem; font-size: 1.35rem; letter-spacing: -.025em; }
+    .rule-card p { position: relative; z-index: 1; margin: 0; color: var(--muted); }
+
+    .modes-section {
+      position: relative;
+      color: #f5f2e6;
+      background:
+        radial-gradient(circle at 80% 10%, rgba(184, 213, 154, .15), transparent 30rem),
+        linear-gradient(150deg, #183e30, #10271e);
+    }
+    .modes-section .section-label { color: #efae87; }
+    .modes-section .section-intro { color: #bdcbc2; }
+    .mode-grid { display: grid; grid-template-columns: 1.18fr .91fr .91fr; gap: 1rem; }
+    .mode-card {
+      position: relative;
+      min-height: 24rem;
+      overflow: hidden;
+      padding: 1.7rem;
+      border: 1px solid rgba(237, 246, 237, .16);
+      border-radius: var(--radius-xl);
+      background: rgba(255, 255, 255, .055);
+      box-shadow: 0 22px 52px rgba(4, 18, 12, .18);
+    }
+    .mode-card.featured { background: linear-gradient(155deg, rgba(184,213,154,.18), rgba(255,255,255,.055)); }
+    .mode-number { color: #9db2a4; font-size: .75rem; font-weight: 850; letter-spacing: .14em; }
+    .mode-card h3 { max-width: 11ch; margin: 4.5rem 0 .7rem; font-size: clamp(1.8rem, 3vw, 2.7rem); letter-spacing: -.05em; }
+    .mode-card p { max-width: 28rem; margin: 0; color: #c5d0c8; }
+    .mode-foot { position: absolute; right: 1.5rem; bottom: 1.5rem; left: 1.5rem; display: flex; justify-content: space-between; gap: .7rem; color: #b8d59a; font-size: .76rem; font-weight: 800; }
+    .mode-orbit {
+      position: absolute;
+      width: 9rem;
+      height: 9rem;
+      top: -2.2rem;
+      right: -1.7rem;
+      border: 1px solid rgba(184, 213, 154, .2);
+      border-radius: 50%;
+      box-shadow: 0 0 0 1.7rem rgba(184, 213, 154, .035), 0 0 0 3.4rem rgba(184, 213, 154, .025);
+    }
+    .mode-orbit::before { position: absolute; width: 1.2rem; height: 1.8rem; top: 2.1rem; left: -.25rem; border-radius: 100% 0 100% 0; background: #b8d59a; content: ""; transform: rotate(-30deg); }
+
+    .feature-layout { display: grid; grid-template-columns: .8fr 1.2fr; gap: clamp(2rem, 6vw, 5.5rem); align-items: start; }
+    .feature-sticky { position: sticky; top: 2rem; }
+    .feature-list { display: grid; gap: .8rem; }
+    .feature-row {
+      display: grid;
+      grid-template-columns: 3.2rem 1fr;
+      gap: 1rem;
+      padding: 1.2rem;
+      border: 1px solid var(--line);
+      border-radius: 1.1rem;
+      background: color-mix(in srgb, var(--surface) 82%, transparent);
+    }
+    .feature-symbol { display: grid; width: 3.2rem; height: 3.2rem; place-items: center; border-radius: .95rem; background: var(--surface-soft); color: var(--fern); font-size: 1.25rem; }
+    .feature-row h3 { margin: .08rem 0 .25rem; font-size: 1.08rem; }
+    .feature-row p { margin: 0; color: var(--muted); font-size: .92rem; }
+
+    .transparency {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: clamp(1.5rem, 5vw, 4rem);
+      padding: clamp(2rem, 5vw, 4rem);
+      border: 1px solid #9eb5a2;
+      border-radius: var(--radius-xl);
+      background: linear-gradient(140deg, var(--surface-soft), var(--surface));
+      box-shadow: var(--shadow);
+    }
+    .transparency h2 { font-size: clamp(2.15rem, 4vw, 3.55rem); }
+    .transparency-copy p { color: var(--muted); }
+    .economy-list { display: grid; gap: .65rem; align-content: center; }
+    .economy-row { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .9rem 1rem; border: 1px solid var(--line); border-radius: .9rem; background: var(--surface); }
+    .economy-row span { color: var(--muted); font-size: .9rem; }
+    .economy-row strong { text-align: right; color: var(--fern-dark); }
+    .ad-note { grid-column: 1 / -1; margin: .35rem 0 0; color: var(--muted); font-size: .84rem; }
+
+    .details-layout { display: grid; grid-template-columns: 1.1fr .9fr; gap: 1rem; }
+    .details-card, .support-card { padding: clamp(1.6rem, 4vw, 2.5rem); border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); box-shadow: var(--shadow-soft); }
+    .details-card h2, .support-card h2 { font-size: clamp(2rem, 4vw, 3rem); }
+    .app-details { display: grid; grid-template-columns: 1fr 1fr; margin: 1.8rem 0 0; }
+    .app-details div { padding: 1rem 0; border-top: 1px solid var(--line); }
+    .app-details div:nth-child(odd) { padding-right: 1rem; }
+    .app-details div:nth-child(even) { padding-left: 1rem; border-left: 1px solid var(--line); }
+    .app-details dt { color: var(--muted); font-size: .75rem; font-weight: 820; letter-spacing: .08em; text-transform: uppercase; }
+    .app-details dd { margin: .24rem 0 0; font-weight: 780; }
+    .support-card { display: flex; flex-direction: column; justify-content: space-between; background: var(--fern-dark); color: #f4f2e8; }
+    .support-card p { color: #c2d0c6; }
+    .support-links { display: grid; gap: .62rem; margin-top: 2rem; }
+    .support-links a { display: flex; align-items: center; justify-content: space-between; padding: .82rem 0; border-top: 1px solid rgba(244,242,232,.18); color: #eff4ed; font-weight: 760; text-decoration: none; }
+    .support-links a::after { color: #b8d59a; content: "↗"; }
+
+    .faq { max-width: 54rem; margin-inline: auto; }
+    details { border-top: 1px solid var(--line); }
+    details:last-child { border-bottom: 1px solid var(--line); }
+    summary { position: relative; padding: 1.2rem 2.5rem 1.2rem 0; cursor: pointer; font-weight: 820; list-style: none; }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { position: absolute; top: 1.1rem; right: .2rem; color: var(--fern); content: "+"; font-size: 1.35rem; }
+    details[open] summary::after { content: "–"; }
+    details p { max-width: 47rem; margin: -.35rem 0 1.25rem; color: var(--muted); }
+
+    .final-cta {
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 5rem;
+      padding: clamp(2.5rem, 7vw, 5.5rem);
+      border-radius: var(--radius-xl);
+      background: linear-gradient(135deg, #dcebd8, #fff4d5 65%, #f1d4c5);
+      color: #17362a;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+    .final-cta::before, .final-cta::after {
+      position: absolute;
+      width: 9rem;
+      height: 15rem;
+      border-radius: 100% 0 100% 0;
+      background: rgba(47, 107, 79, .09);
+      content: "";
+    }
+    .final-cta::before { top: -5rem; left: -2rem; transform: rotate(42deg); }
+    .final-cta::after { right: -3rem; bottom: -6rem; transform: rotate(-62deg); }
+    .final-cta h2 { position: relative; z-index: 1; max-width: 13ch; margin-inline: auto; }
+    .final-cta p { position: relative; z-index: 1; max-width: 38rem; margin: 1rem auto 1.6rem; color: #53655b; }
+    .final-cta .button { position: relative; z-index: 1; }
+
+    footer { border-top: 1px solid var(--line); }
+    .footer-grid { display: grid; grid-template-columns: 1.2fr .8fr .8fr; gap: 2rem; padding: 2.7rem 0; }
+    .footer-note { max-width: 30rem; margin: .8rem 0 0; color: var(--muted); font-size: .88rem; }
+    .footer-group strong { display: block; margin-bottom: .65rem; font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+    .footer-group a, .footer-group span { display: block; margin-top: .36rem; color: var(--muted); font-size: .88rem; }
+    .footer-bottom { display: flex; justify-content: space-between; gap: 1rem; padding: 1.15rem 0 2.2rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .8rem; }
+
+    @media (max-width: 58rem) {
+      .nav-links a:not(.nav-cta) { display: none; }
+      .hero { grid-template-columns: 1fr; padding-top: 4.5rem; }
+      .hero-copy { text-align: center; }
+      h1, .hero-lede { margin-inline: auto; }
+      .hero-actions, .hero-meta { justify-content: center; }
+      .hero-art { min-height: 39rem; }
+      .stats { grid-template-columns: 1fr 1fr; }
+      .stat:nth-child(3) { border-left: 0; border-top: 1px solid var(--line); }
+      .stat:nth-child(4) { border-top: 1px solid var(--line); }
+      .rule-grid, .mode-grid { grid-template-columns: 1fr; }
+      .rule-card { min-height: 13rem; }
+      .mode-card { min-height: 20rem; }
+      .feature-layout, .transparency, .details-layout { grid-template-columns: 1fr; }
+      .feature-sticky { position: static; }
+      .footer-grid { grid-template-columns: 1fr 1fr; }
+      .footer-grid > :first-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 35rem) {
+      .shell { width: min(100% - 1.25rem, 74rem); }
+      .site-header { padding-top: .7rem; }
+      .nav-cta { padding: .52rem .72rem; font-size: .8rem !important; }
+      .hero { min-height: auto; padding-top: 3.2rem; }
+      h1 { font-size: clamp(3.05rem, 17vw, 4.5rem); }
+      .hero-actions { display: grid; }
+      .hero-actions .button { width: 100%; }
+      .hero-art { min-height: 37rem; }
+      .phone { width: min(20rem, 94vw); transform: none; }
+      .stats { grid-template-columns: 1fr; }
+      .stat + .stat { border-top: 1px solid var(--line); border-left: 0; }
+      .section { padding: 4.5rem 0; }
+      .mode-card { min-height: 22rem; }
+      .app-details { grid-template-columns: 1fr; }
+      .app-details div:nth-child(odd), .app-details div:nth-child(even) { padding-inline: 0; border-left: 0; }
+      .economy-row { align-items: flex-start; flex-direction: column; }
+      .economy-row strong { text-align: left; }
+      .footer-grid { grid-template-columns: 1fr; }
+      .footer-grid > :first-child { grid-column: auto; }
+      .footer-bottom { flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .button { transition: none; }
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --canvas: #102019;
+        --canvas-deep: #14271f;
+        --surface: #182c23;
+        --surface-soft: #213b2f;
+        --surface-strong: #294737;
+        --ink: #eef4ec;
+        --muted: #b6c6ba;
+        --fern: #93d1a3;
+        --fern-dark: #b8e5c1;
+        --fern-soft: #2a503a;
+        --terracotta: #efa083;
+        --gold: #efc265;
+        --berry: #e78aa2;
+        --line: #3a5848;
+        --shadow: 0 24px 70px rgba(0, 0, 0, .2);
+        --shadow-soft: 0 12px 36px rgba(0, 0, 0, .16);
+      }
+      body { background: radial-gradient(circle at 8% 3%, rgba(82, 139, 94, .2), transparent 28rem), linear-gradient(180deg, #102019, #14271f 55%, #102019); }
+      .brand-mark { border-color: rgba(184,213,154,.3); }
+      .button-primary { background: #a9dcaf; color: #10251c; }
+      .button-primary::before { border-left-color: #315f49; }
+      .hero-art::before { background: linear-gradient(145deg, rgba(37,78,55,.78), rgba(24,44,35,.3)); }
+      .phone { border-color: #53705e; }
+      .stat strong, .economy-row strong { color: var(--fern); }
+      .final-cta { background: linear-gradient(135deg, #294737, #3b472c 65%, #4b322b); color: #eef4ec; }
+      .final-cta p { color: #c2d0c6; }
+    }
+
+    @media print {
+      body { background: #fff; color: #111; }
+      .site-header, .hero-art, .hero-actions, .final-cta { display: none; }
+      .hero { min-height: auto; grid-template-columns: 1fr; padding: 2rem 0; }
+      .section { padding: 2rem 0; }
+      .modes-section { background: #fff; color: #111; }
+      .modes-section .section-intro, .mode-card p { color: #333; }
+      .mode-card, .rule-card, .details-card, .support-card { break-inside: avoid; box-shadow: none; }
+      .support-card { background: #fff; color: #111; }
+      .support-card p, .support-links a { color: #333; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header">
+    <div class="shell nav-wrap">
+      <a class="brand" href="#top" aria-label="MazeBloom home">
+        <span class="brand-mark" aria-hidden="true"><span class="brand-dot"></span></span>
+        MazeBloom
+      </a>
+      <nav class="nav-links" aria-label="Primary navigation">
+        <a href="#gameplay">How to play</a>
+        <a href="#modes">Game modes</a>
+        <a href="#features">Features</a>
+        <a href="index.html">Privacy</a>
+        <a class="nav-cta" href="https://play.google.com/store/apps/details?id=com.rameshta.mazebloom">View on Google Play</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="shell hero" id="top">
+      <div class="hero-copy">
+        <p class="eyebrow">Botanical puzzles for Android</p>
+        <h1>Every move leaves a bloom.</h1>
+        <p class="hero-lede">Guide the Seed through every Bud—but plan carefully. Each square you leave becomes a Bloom wall, transforming one simple swipe into a living maze.</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="https://play.google.com/store/apps/details?id=com.rameshta.mazebloom">View on Google Play</a>
+          <a class="button button-secondary" href="#gameplay">See how it plays</a>
+        </div>
+        <div class="hero-meta" role="list" aria-label="App highlights">
+          <span class="chip" role="listitem">Works offline</span>
+          <span class="chip" role="listitem">No account</span>
+          <span class="chip" role="listitem">Android 7.0+</span>
+          <span class="chip" role="listitem">Puzzle game</span>
+        </div>
+      </div>
+
+      <div class="hero-art" role="img" aria-label="Illustration of MazeBloom gameplay">
+        <span class="petal petal-one" aria-hidden="true"></span>
+        <span class="petal petal-two" aria-hidden="true"></span>
+        <span class="petal petal-three" aria-hidden="true"></span>
+        <div class="phone" aria-hidden="true">
+          <div class="phone-screen">
+            <div class="phone-status"><span>9:41</span><span class="signal">● ◔ ▰</span></div>
+            <div class="game-top"><span class="back-dot">‹</span><span class="coin-pill">120 🪙</span></div>
+            <div class="game-copy">
+              <span class="game-kicker">Garden 3 · Chapter 2</span>
+              <p class="game-level-title">Level 127</p>
+              <div class="game-stats"><span>Moves 4</span><span>Buds 3</span><span>Hard</span></div>
+            </div>
+            <div class="board-wrap">
+              <div class="board">
+                <span class="tile stone"></span><span class="tile"></span><span class="tile bud"></span><span class="tile"></span><span class="tile stone"></span><span class="tile"></span>
+                <span class="tile"></span><span class="tile bloom"></span><span class="tile bloom"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span>
+                <span class="tile stone"></span><span class="tile bloom"></span><span class="tile seed"></span><span class="tile"></span><span class="tile bud"></span><span class="tile stone"></span>
+                <span class="tile"></span><span class="tile bloom"></span><span class="tile stone"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span>
+                <span class="tile"></span><span class="tile bloom"></span><span class="tile bloom"></span><span class="tile bloom"></span><span class="tile"></span><span class="tile bud"></span>
+                <span class="tile stone"></span><span class="tile"></span><span class="tile"></span><span class="tile"></span><span class="tile stone"></span><span class="tile"></span>
+              </div>
+            </div>
+            <div class="hint-line"><span>↑</span> Try up. The Seed finishes the whole slide.</div>
+            <div class="controls"><span class="control">Undo · 30</span><span class="control">Restart</span><span class="control primary">Hint · 30</span></div>
+            <div class="gesture-bar"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="shell stats" role="list" aria-label="MazeBloom by the numbers">
+      <div class="stat" role="listitem"><strong>2,000</strong><span>Campaign levels</span></div>
+      <div class="stat" role="listitem"><strong>20</strong><span>Distinct Gardens</span></div>
+      <div class="stat" role="listitem"><strong>100</strong><span>Campaign Chapters</span></div>
+      <div class="stat" role="listitem"><strong>Offline</strong><span>Core gameplay</span></div>
+    </div>
+
+    <section class="section shell" id="gameplay">
+      <div class="section-head">
+        <p class="section-label">A rule you can feel</p>
+        <h2>Simple to swipe. Delightfully hard to untangle.</h2>
+        <p class="section-intro">There are only four directions, but every choice changes the board behind you. Read the garden, commit to a slide, and grow a path that reaches every Bud.</p>
+      </div>
+      <div class="rule-grid">
+        <article class="rule-card">
+          <span class="rule-icon" aria-hidden="true">↗</span>
+          <h3>Swipe to glide</h3>
+          <p>The Seed keeps moving until Stone, Bloom, or the edge of the garden stops it.</p>
+        </article>
+        <article class="rule-card">
+          <span class="rule-icon" aria-hidden="true">✿</span>
+          <h3>Your trail Blooms</h3>
+          <p>Every square the Seed leaves turns into a wall. Your route becomes the next part of the puzzle.</p>
+        </article>
+        <article class="rule-card">
+          <span class="rule-icon" aria-hidden="true">◎</span>
+          <h3>Reach every Bud</h3>
+          <p>Collect the full garden without enclosing the Seed. Fewer moves earn brighter stars.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section modes-section" id="modes">
+      <div class="shell">
+        <div class="section-head">
+          <p class="section-label">Choose your path</p>
+          <h2>Three ways to grow.</h2>
+          <p class="section-intro">Settle into a long campaign, return for one fresh daily puzzle, or keep growing with private on-device generation.</p>
+        </div>
+        <div class="mode-grid">
+          <article class="mode-card featured">
+            <span class="mode-orbit" aria-hidden="true"></span>
+            <span class="mode-number">01 · MAIN JOURNEY</span>
+            <h3>Campaign</h3>
+            <p>Grow through 20 Gardens and 100 Chapters across 2,000 certified puzzles. The first five levels teach the garden with animated swipe guidance.</p>
+            <div class="mode-foot"><span>2,000 levels</span><span>5 challenge bands →</span></div>
+          </article>
+          <article class="mode-card">
+            <span class="mode-orbit" aria-hidden="true"></span>
+            <span class="mode-number">02 · TODAY'S PUZZLE</span>
+            <h3>Daily Bloom</h3>
+            <p>One offline challenge selected for your local day, pinned through clock rollback, with history and streak tracking on your device.</p>
+            <div class="mode-foot"><span>Unlocks after level 10</span><span>Offline →</span></div>
+          </article>
+          <article class="mode-card">
+            <span class="mode-orbit" aria-hidden="true"></span>
+            <span class="mode-number">03 · THE LONG TRAIL</span>
+            <h3>Endless Garden</h3>
+            <p>A 100-level certified starter followed by practically unbounded puzzles generated and checked privately against retained local history.</p>
+            <div class="mode-foot"><span>Unlocks after Campaign</span><span>On-device →</span></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section shell" id="features">
+      <div class="feature-layout">
+        <div class="feature-sticky">
+          <p class="section-label">Made to feel good</p>
+          <h2>Thoughtful from first swipe to full bloom.</h2>
+          <p class="section-intro">A tactile, living-paper garden interface keeps the puzzle in focus and gives every solved board a moment worth celebrating.</p>
+        </div>
+        <div class="feature-list">
+          <article class="feature-row">
+            <span class="feature-symbol" aria-hidden="true">◫</span>
+            <div><h3>Certified puzzle design</h3><p>Every bundled board is solved and checked for structure, difficulty, and repeat collisions before it reaches the app.</p></div>
+          </article>
+          <article class="feature-row">
+            <span class="feature-symbol" aria-hidden="true">◒</span>
+            <div><h3>Light, dark, and high contrast</h3><p>Choose System, Light, or Dark appearance, then add stronger outlines and separation when you want them.</p></div>
+          </article>
+          <article class="feature-row">
+            <span class="feature-symbol" aria-hidden="true">↕</span>
+            <div><h3>Swipe or use direction buttons</h3><p>Play naturally with gestures or enable large on-screen direction controls as an alternative.</p></div>
+          </article>
+          <article class="feature-row">
+            <span class="feature-symbol" aria-hidden="true">≈</span>
+            <div><h3>Motion on your terms</h3><p>Reduced motion replaces travel, tutorial, and celebration choreography with settled states and quick transitions.</p></div>
+          </article>
+          <article class="feature-row">
+            <span class="feature-symbol" aria-hidden="true">✦</span>
+            <div><h3>A celebration you can share</h3><p>Flowers, emoji, and confetti mark every completed board. Share the full celebration screenshot with the Play Store link.</p></div>
+          </article>
+          <article class="feature-row">
+            <span class="feature-symbol" aria-hidden="true">⌁</span>
+            <div><h3>Private progress, no account</h3><p>Your settings, progress, replays, and Endless Garden history live in private app storage. Core play needs no sign-in.</p></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section shell" id="coins">
+      <div class="transparency">
+        <div class="transparency-copy">
+          <p class="section-label">Clear and predictable</p>
+          <h2>Coins help. They never hide the puzzle.</h2>
+          <p>Earn Coins by returning and solving. Spend them only when you choose support such as Hint, Undo, or an eligible Skip. In an ad-supported build, insufficient-Coin actions may offer an explicit rewarded-ad alternative.</p>
+        </div>
+        <div class="economy-list" role="list" aria-label="Coin economy">
+          <div class="economy-row" role="listitem"><span>Forward local day</span><strong>+30 Coins</strong></div>
+          <div class="economy-row" role="listitem"><span>First completion</span><strong>+10 Coins</strong></div>
+          <div class="economy-row" role="listitem"><span>Hint or Undo</span><strong>30 Coins</strong></div>
+          <div class="economy-row" role="listitem"><span>Eligible level Skip</span><strong>50 Coins</strong></div>
+        </div>
+        <p class="ad-note">The ad-supported release may also show a standard interstitial after every fifth first completion and an App Open ad no more than once per two-hour cooldown. A completed rewarded ad protects against standard interstitials for 60 seconds. Ad availability never changes puzzle rules or blocks ordinary movement.</p>
+      </div>
+    </section>
+
+    <div class="section shell" id="details">
+      <div class="details-layout">
+        <article class="details-card">
+          <p class="section-label">App details</p>
+          <h2>Everything you need to know.</h2>
+          <dl class="app-details">
+            <div><dt>Developer</dt><dd>Naimish Gupta</dd></div>
+            <div><dt>Category</dt><dd>Puzzle game</dd></div>
+            <div><dt>Version</dt><dd>1.0</dd></div>
+            <div><dt>Requires</dt><dd>Android 7.0+</dd></div>
+            <div><dt>Package</dt><dd>com.rameshta.mazebloom</dd></div>
+            <div><dt>Updated</dt><dd><time datetime="2026-08-23">23 Aug 2026</time></dd></div>
+            <div><dt>Account</dt><dd>Not required</dd></div>
+            <div><dt>Core gameplay</dt><dd>Available offline</dd></div>
+          </dl>
+        </article>
+        <aside class="support-card" id="support">
+          <div>
+            <p class="section-label">Support &amp; trust</p>
+            <h2>Questions are welcome.</h2>
+            <p>Read the complete privacy policy or contact the developer for support and privacy requests.</p>
+          </div>
+          <div class="support-links">
+            <a href="index.html">Privacy policy</a>
+            <a href="mailto:naimish.app@gmail.com">naimish.app@gmail.com</a>
+            <a href="https://play.google.com/store/apps/details?id=com.rameshta.mazebloom">Google Play listing</a>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <section class="section shell" id="questions">
+      <div class="faq">
+        <div class="section-head">
+          <p class="section-label">Good to know</p>
+          <h2>Before you start growing.</h2>
+        </div>
+        <details>
+          <summary>Can I play MazeBloom offline?</summary>
+          <p>Yes. The complete Campaign, Daily Bloom selection, progress, and puzzle rules work locally. Endless Garden generation also runs on your device. Advertising features in an ad-supported build need a network, but ordinary gameplay remains available when ads are not.</p>
+        </details>
+        <details>
+          <summary>Is Endless Garden truly infinite?</summary>
+          <p>MazeBloom calls it practically unbounded, not mathematically infinite. After its certified 100-level starter, it generates and certifies puzzles as you progress while checking against the history retained on your device.</p>
+        </details>
+        <details>
+          <summary>What happens if I clear the app's data?</summary>
+          <p>Clearing storage or uninstalling removes local progress, settings, Coins, replays, and Endless Garden history. Because backup and device transfer are disabled, that history is not restored automatically.</p>
+        </details>
+        <details>
+          <summary>Does MazeBloom require an account?</summary>
+          <p>No. MazeBloom does not require a player account. See the privacy policy for details about local data and the optional Google advertising services used by an ad-supported release.</p>
+        </details>
+      </div>
+    </section>
+
+    <section class="shell final-cta" aria-labelledby="cta-title">
+      <p class="section-label">Your garden is waiting</p>
+      <h2 id="cta-title">Find the path. Leave it blooming.</h2>
+      <p>Start with five guided tutorials, then grow through a campaign made for quiet focus and clever discovery.</p>
+      <a class="button button-primary" href="https://play.google.com/store/apps/details?id=com.rameshta.mazebloom">View MazeBloom on Google Play</a>
+    </section>
+  </main>
+
+  <footer>
+    <div class="shell footer-grid">
+      <div>
+        <a class="brand" href="#top" aria-label="MazeBloom home">
+          <span class="brand-mark" aria-hidden="true"><span class="brand-dot"></span></span>
+          MazeBloom
+        </a>
+        <p class="footer-note">A living-maze puzzle game designed and published by Naimish Gupta.</p>
+      </div>
+      <div class="footer-group">
+        <strong>Explore</strong>
+        <a href="#gameplay">How to play</a>
+        <a href="#modes">Game modes</a>
+        <a href="#features">Features</a>
+        <a href="#details">App details</a>
+      </div>
+      <div class="footer-group">
+        <strong>Contact</strong>
+        <a href="index.html">Privacy policy</a>
+        <a href="mailto:naimish.app@gmail.com">naimish.app@gmail.com</a>
+        <span>Sandi, Hardoi, 241403<br>Uttar Pradesh, India</span>
+      </div>
+    </div>
+    <div class="shell footer-bottom">
+      <span>© 2026 Naimish Gupta. All rights reserved.</span>
+      <span>Made for Android · Works offline</span>
+    </div>
+  </footer>
+</body>
+</html>
