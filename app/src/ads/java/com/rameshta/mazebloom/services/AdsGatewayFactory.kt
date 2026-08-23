@@ -7,6 +7,7 @@ fun createAdsGateway(activity: ComponentActivity): AdsGateway =
     if (BuildConfig.ADMOB_ENABLED) {
         GoogleMobileAdsGateway(
             activity = activity,
+            appOpenAdUnitId = BuildConfig.ADMOB_APP_OPEN_ID,
             interstitialAdUnitId = BuildConfig.ADMOB_INTERSTITIAL_ID,
             rewardedAdUnitId = BuildConfig.ADMOB_REWARDED_ID,
         )

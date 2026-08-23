@@ -85,9 +85,12 @@
     <string name="tutorial_swipe_cue">Swipe %1$s to guide the Seed</string>
     <string name="tutorial_finger_description">Animated finger showing a swipe %1$s</string>
     <string name="undo">Undo</string>
+    <string name="undo_coin_cost">Undo · %1$d 🪙</string>
+    <string name="undo_ad">Undo · ▶ AD</string>
     <string name="restart">Restart</string>
     <string name="hint_coin_cost">Hint · %1$d 🪙</string>
     <string name="hint_ad">Hint · ▶ AD</string>
+    <string name="skip_level_coin_cost">Skip level · %1$d 🪙</string>
     <string name="skip_level_ad">Skip level · ▶ AD</string>
     <string name="ad_loading">Opening ad…</string>
     <string name="ad_unavailable">An ad is unavailable right now. Keep playing to earn 10 Coins per completed level.</string>

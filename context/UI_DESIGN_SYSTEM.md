@@ -10,7 +10,9 @@ Spacing follows 4dp increments. Primary touch targets are at least 48dp. Paper c
 
 ## Components and screens
 
-The Home hero uses a programmatically drawn six-petal brand mark. Campaign, Garden, and Chapter screens retain stable lazy-list/grid keys and show progress using shape plus text, not color alone. Game keeps the board visually dominant, with its HUD and action dock adapting between compact and wide layouts. The first five Campaign levels show a programmatically drawn moving finger guide that never handles pointer input. Completion uses a bounded Compose confetti layer, a small result-sensitive emoji accent, and a bottom result sheet.
+The Home hero uses a programmatically drawn six-petal brand mark. Campaign, Garden, and Chapter screens retain stable lazy-list/grid keys and show progress using shape plus text, not color alone. Game keeps the board visually dominant, with its HUD and action dock adapting between compact and wide layouts. The first five Campaign levels show a programmatically drawn moving finger guide that never handles pointer input. Completion uses a bounded Compose confetti layer, a visible animated flower/leaf/sparkle emoji layer, fixed flower emojis around the Bloom mark, and a bottom result sheet. Reduced motion settles those same visual cues without removing the celebration.
+
+“Continue growing” launches the next playable level with Home as its explicit return target; Back therefore returns directly to Home. Share waits for pressed-state cleanup, captures the complete settled celebration screen as a PNG, and sends it with the package-specific Play Store URL through Android's chooser.
 
 `LivingGardenLightPreview` and `LivingGardenDarkPreview` provide IDE-renderable token/brand specimens. Static board floor and Stone geometry use a `drawWithCache` layer; animated Seed, Bud, Bloom, and hint state draw separately so frame updates do not rebuild the static geometry.
 

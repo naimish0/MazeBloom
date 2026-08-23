@@ -10,11 +10,13 @@ This is a release-operator worksheet, not a substitute for reviewing the current
 - **Deletion request mechanism:** No cloud account or server data exists. Users delete all app data through Android Clear storage or uninstall.
 - **Independent security review:** Declare only if one has actually been completed and qualifies under Play's current wording.
 
-Local game progress, settings, generated puzzles, replay history, coin state, and idempotency identifiers stay in private app storage. Android cloud backup and device-transfer backup are disabled. Local-only processing is not declared as collection when it never leaves the device under Play's current definition, but the operator must recheck the definition at submission time.
+Local game progress, settings, generated puzzles, replay history, coin state, the last forward date credited with daily Coins, rewarded-callback idempotency identifiers, and local ad-cooldown timestamps stay in private app storage. Android cloud backup and device-transfer backup are disabled. Local-only processing is not declared as collection when it never leaves the device under Play's current definition, but the operator must recheck the definition at submission time.
 
 ## Ad-supported `production` build
 
 In addition to the local behavior above, Google Mobile Ads SDK 25.4.0 states that it automatically collects and shares the following. Verify the current Google disclosure again immediately before submission.
+
+The production artifact can request App Open ads on foreground entry, rewarded ads only after a player chooses an insufficient-Coin Hint, Undo, or Skip action, and a standard interstitial after every fifth first completion. The app persists only the App Open impression time and rewarded-completion time needed for its two-hour and 60-second protections; Google controls the advertising data processed by its SDK and partners.
 
 | Play data type | Typical form purpose(s) | Handling |
 | --- | --- | --- |

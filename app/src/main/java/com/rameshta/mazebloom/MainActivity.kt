@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.rameshta.mazebloom.data.BundledContentRepository
@@ -12,6 +14,9 @@ import com.rameshta.mazebloom.data.RoomProgressRepository
 import com.rameshta.mazebloom.data.RoomEndlessRepository
 import com.rameshta.mazebloom.data.SystemLocalDateSource
 import com.rameshta.mazebloom.services.DebugAnalytics
+import com.rameshta.mazebloom.services.AdsGateway
+import com.rameshta.mazebloom.services.Analytics
+import com.rameshta.mazebloom.services.AnalyticsEvent
 import com.rameshta.mazebloom.services.NoOpAnalytics
 import com.rameshta.mazebloom.services.NoOpConsentGateway
 import com.rameshta.mazebloom.services.createAdsGateway
@@ -20,19 +25,26 @@ import com.rameshta.mazebloom.ui.MazeBloomViewModel
 import com.rameshta.mazebloom.ui.theme.MazeBloomTheme
 import com.rameshta.mazebloom.data.ThemeMode
 import androidx.compose.foundation.isSystemInDarkTheme
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.first
 
 class MainActivity : ComponentActivity() {
+    private lateinit var ads: AdsGateway
+    private lateinit var analytics: Analytics
+    private var appOpenRequestInFlight = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         val content = BundledContentRepository(applicationContext)
-        val ads = createAdsGateway(this)
+        ads = createAdsGateway(this)
+        analytics = if (BuildConfig.DEBUG) DebugAnalytics { Log.d("MazeBloom", it) } else NoOpAnalytics
         val factory = MazeBloomViewModel.Factory(
             content = content,
             progress = RoomProgressRepository(applicationContext),
             endlessRepository = RoomEndlessRepository(applicationContext, content),
             dateSource = SystemLocalDateSource(),
-            analytics = if (BuildConfig.DEBUG) DebugAnalytics { Log.d("MazeBloom", it) } else NoOpAnalytics,
+            analytics = analytics,
             ads = ads,
             consent = (ads as? com.rameshta.mazebloom.services.ConsentGateway) ?: NoOpConsentGateway,
         )
@@ -46,6 +58,22 @@ class MainActivity : ComponentActivity() {
             }
             MazeBloomTheme(darkTheme = dark, highContrast = state.settings.highContrast) {
                 MazeBloomApp(model = model, state = state)
+            }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (!::ads.isInitialized || appOpenRequestInFlight) return
+        appOpenRequestInFlight = true
+        lifecycleScope.launch {
+            try {
+                lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
+                analytics.record(AnalyticsEvent.AD_REQUEST, mapOf("placement" to "app_open"))
+                val result = ads.showAppOpen()
+                analytics.record(AnalyticsEvent.AD_RESULT, mapOf("placement" to "app_open", "result" to result.name))
+            } finally {
+                appOpenRequestInFlight = false
             }
         }
     }

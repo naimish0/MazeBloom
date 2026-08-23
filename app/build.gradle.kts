@@ -52,12 +52,14 @@ abstract class VerifyProductionAdsConfigurationTask : DefaultTask() {
     fun verifyConfiguration() {
         check(adsConfigured.get()) {
             "Production ads are not configured. Supply non-test MAZEBLOOM_ADMOB_APP_ID, " +
-                "MAZEBLOOM_ADMOB_INTERSTITIAL_ID, and MAZEBLOOM_ADMOB_REWARDED_ID values."
+                "MAZEBLOOM_ADMOB_APP_OPEN_ID, MAZEBLOOM_ADMOB_INTERSTITIAL_ID, and " +
+                "MAZEBLOOM_ADMOB_REWARDED_ID values."
         }
     }
 }
 
 val googleTestAdMobAppId = "ca-app-pub-3940256099942544~3347511713"
+val googleTestAppOpenId = "ca-app-pub-3940256099942544/9257395921"
 val googleTestInterstitialId = "ca-app-pub-3940256099942544/1033173712"
 val googleTestRewardedId = "ca-app-pub-3940256099942544/5224354917"
 
@@ -68,17 +70,21 @@ fun externalValue(name: String): String = providers.gradleProperty(name)
     .trim()
 
 val productionAdMobAppId = externalValue("MAZEBLOOM_ADMOB_APP_ID")
+val productionAppOpenId = externalValue("MAZEBLOOM_ADMOB_APP_OPEN_ID")
 val productionInterstitialId = externalValue("MAZEBLOOM_ADMOB_INTERSTITIAL_ID")
 val productionRewardedId = externalValue("MAZEBLOOM_ADMOB_REWARDED_ID")
 val adMobAppIdPattern = Regex("ca-app-pub-\\d{16}~\\d{10}")
 val adMobUnitIdPattern = Regex("ca-app-pub-\\d{16}/\\d{10}")
 val productionAdsConfigured = adMobAppIdPattern.matches(productionAdMobAppId) &&
+    adMobUnitIdPattern.matches(productionAppOpenId) &&
     adMobUnitIdPattern.matches(productionInterstitialId) &&
     adMobUnitIdPattern.matches(productionRewardedId) &&
     productionAdMobAppId != googleTestAdMobAppId &&
+    productionAppOpenId != googleTestAppOpenId &&
     productionInterstitialId != googleTestInterstitialId &&
     productionRewardedId != googleTestRewardedId
 val configuredAdMobAppId = productionAdMobAppId.takeIf { productionAdsConfigured }.orEmpty()
+val configuredAppOpenId = productionAppOpenId.takeIf { productionAdsConfigured }.orEmpty()
 val configuredInterstitialId = productionInterstitialId.takeIf { productionAdsConfigured }.orEmpty()
 val configuredRewardedId = productionRewardedId.takeIf { productionAdsConfigured }.orEmpty()
 val releaseKeystorePath = externalValue("MAZEBLOOM_KEYSTORE_FILE")
@@ -133,6 +139,7 @@ android {
             manifestPlaceholders["ADMOB_APP_ID"] = googleTestAdMobAppId
             manifestPlaceholders["MOBILE_ADS_PROVIDER_ENABLED"] = "true"
             buildConfigField("boolean", "ADMOB_ENABLED", "true")
+            buildConfigField("String", "ADMOB_APP_OPEN_ID", googleTestAppOpenId.asBuildConfigString())
             buildConfigField("String", "ADMOB_INTERSTITIAL_ID", googleTestInterstitialId.asBuildConfigString())
             buildConfigField("String", "ADMOB_REWARDED_ID", googleTestRewardedId.asBuildConfigString())
         }
@@ -147,6 +154,7 @@ android {
             )
             signingConfig = signingConfigs.findByName("release")
             buildConfigField("boolean", "ADMOB_ENABLED", "false")
+            buildConfigField("String", "ADMOB_APP_OPEN_ID", "\"\"")
             buildConfigField("String", "ADMOB_INTERSTITIAL_ID", "\"\"")
             buildConfigField("String", "ADMOB_REWARDED_ID", "\"\"")
         }
@@ -156,6 +164,7 @@ android {
             manifestPlaceholders["ADMOB_APP_ID"] = configuredAdMobAppId
             manifestPlaceholders["MOBILE_ADS_PROVIDER_ENABLED"] = productionAdsConfigured.toString()
             buildConfigField("boolean", "ADMOB_ENABLED", productionAdsConfigured.toString())
+            buildConfigField("String", "ADMOB_APP_OPEN_ID", configuredAppOpenId.asBuildConfigString())
             buildConfigField("String", "ADMOB_INTERSTITIAL_ID", configuredInterstitialId.asBuildConfigString())
             buildConfigField("String", "ADMOB_REWARDED_ID", configuredRewardedId.asBuildConfigString())
         }

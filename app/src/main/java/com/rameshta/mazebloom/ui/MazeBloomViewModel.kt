@@ -58,6 +58,10 @@ sealed interface AppScreen {
 enum class HintStatus { IDLE, SEARCHING, DIRECTION, DOOMED, UNAVAILABLE }
 enum class AdActionStatus { IDLE, LOADING, UNAVAILABLE }
 enum class DebugAdPlacement { INTERSTITIAL, REWARDED }
+internal enum class EconomyPaymentSource { COINS, REWARDED_AD }
+
+internal fun economyPaymentSource(balance: Int, cost: Int): EconomyPaymentSource =
+    if (balance >= cost) EconomyPaymentSource.COINS else EconomyPaymentSource.REWARDED_AD
 
 data class DebugAdDiagnostic(
     val placement: DebugAdPlacement,
@@ -92,6 +96,7 @@ data class MazeBloomUiState(
     val highestUnlockedCampaignOrder: Int = 1,
     val coinBalance: Int = 0,
     val adActionStatus: AdActionStatus = AdActionStatus.IDLE,
+    val economyActionInFlight: Boolean = false,
     val adServicesEnabled: Boolean = false,
     val privacyOptionsRequired: Boolean = false,
     val debugAdInFlight: Boolean = false,
@@ -142,7 +147,10 @@ class MazeBloomViewModel(
 
     init {
         analytics.record(AnalyticsEvent.APP_OPENED)
-        viewModelScope.launch { refreshProgress() }
+        viewModelScope.launch {
+            progress.claimDailyCoins(dateSource.today(), DAILY_COIN_GRANT)
+            refreshProgress()
+        }
         viewModelScope.launch {
             consent.resolve()
             _uiState.update {
@@ -302,6 +310,7 @@ class MazeBloomViewModel(
                 endlessGenerated = generated,
                 completionRewardCoins = 0,
                 contentLoading = false, contentError = false, adActionStatus = AdActionStatus.IDLE,
+                economyActionInFlight = false,
             )
         }
         if (progressive && (_uiState.value.endlessOrdinal >= 97L || generated)) {
@@ -314,7 +323,7 @@ class MazeBloomViewModel(
 
     fun move(direction: Direction) {
         val game = session ?: return
-        if (_uiState.value.presentingTransition || game.state.status == GameStatus.SOLVED) return
+        if (_uiState.value.presentingTransition || _uiState.value.economyActionInFlight || game.state.status == GameStatus.SOLVED) return
         val result = game.move(direction)
         if (!result.isValid) {
             _uiState.update { it.copy(lastTransition = result) }
@@ -350,6 +359,7 @@ class MazeBloomViewModel(
                     _uiState.update { it.copy(completionRewardCoins = if (outcome.firstCompletion) 10 else 0) }
                     analytics.record(AnalyticsEvent.LEVEL_COMPLETED, mapOf("level_id" to game.level.id, "moves" to result.afterState.moveCount.toString()))
                 }
+                showPendingInterstitial(waitForPersistence = false)
                 refreshProgress()
                 if (_uiState.value.isProgressive) {
                     val next = _uiState.value.endlessOrdinal + 1L
@@ -367,16 +377,35 @@ class MazeBloomViewModel(
     }
 
     fun undo() {
+        val game = session ?: return
+        val state = _uiState.value
+        if (!state.canUndo || state.presentingTransition || state.gameState?.status == GameStatus.SOLVED || !beginEconomyAction()) return
+        viewModelScope.launch {
+            try {
+                val payment = authorizeCoinOrRewardedAction(UNDO_COST, "undo") ?: return@launch
+                if (session !== game || _uiState.value.screen !is AppScreen.Game) return@launch
+                performUndo(payment)
+            } finally {
+                _uiState.update { it.copy(economyActionInFlight = false) }
+            }
+        }
+    }
+
+    private fun performUndo(payment: EconomyPaymentSource) {
         val restored = session?.undo() ?: return
         if (replayDirections.isNotEmpty()) replayDirections.removeAt(replayDirections.lastIndex)
         val level = session!!.level
         val replay = replayDirections.toList()
         persist { progress.saveAttempt(level, restored, replay) }
-        analytics.record(AnalyticsEvent.UNDO_USED, mapOf("level_id" to session!!.level.id))
+        analytics.record(
+            AnalyticsEvent.UNDO_USED,
+            mapOf("level_id" to session!!.level.id, "payment" to payment.name.lowercase()),
+        )
         _uiState.update { it.copy(gameState = restored, canUndo = replayDirections.isNotEmpty(), hintStatus = HintStatus.IDLE, hintDirection = null, replay = replayDirections.toList()) }
     }
 
     fun restart() {
+        if (_uiState.value.economyActionInFlight) return
         val game = session ?: return
         val state = game.restart()
         replayDirections.clear()
@@ -388,38 +417,63 @@ class MazeBloomViewModel(
     fun requestHint(deeper: Boolean = false) {
         val level = _uiState.value.gameLevel ?: return
         val state = _uiState.value.gameState ?: return
-        if (state.status != GameStatus.ACTIVE || _uiState.value.presentingTransition || _uiState.value.adActionStatus == AdActionStatus.LOADING) return
+        if (state.status != GameStatus.ACTIVE || _uiState.value.presentingTransition || !beginEconomyAction()) return
         hintJob?.cancel()
         analytics.record(AnalyticsEvent.HINT_REQUESTED, mapOf("level_id" to level.id, "depth" to if (deeper) "deep" else "basic"))
         hintJob = viewModelScope.launch {
-            if (_uiState.value.coinBalance >= HINT_COST) {
-                if (!progress.spendCoins(HINT_COST)) {
-                    refreshProgress()
+            try {
+                if (authorizeCoinOrRewardedAction(HINT_COST, "hint") == null) {
+                    _uiState.update { it.copy(hintStatus = HintStatus.IDLE) }
                     return@launch
                 }
+                _uiState.update { it.copy(hintStatus = HintStatus.SEARCHING, hintDirection = null) }
+                val report = withContext(Dispatchers.Default) { MazeBloomSolver.solve(level, state, SolveMode.FROM_CURRENT_STATE) }
+                val status = when (report.status) {
+                    SolveStatus.SOLVED -> HintStatus.DIRECTION
+                    SolveStatus.UNSOLVABLE -> HintStatus.DOOMED
+                    SolveStatus.BUDGET_EXCEEDED -> HintStatus.UNAVAILABLE
+                }
+                _uiState.update { it.copy(hintStatus = status, hintDirection = report.canonicalSolution.firstOrNull()) }
+                if (status == HintStatus.DIRECTION) analytics.record(AnalyticsEvent.HINT_SHOWN, mapOf("level_id" to level.id))
+            } finally {
+                _uiState.update { it.copy(economyActionInFlight = false) }
+            }
+        }
+    }
+
+    private fun beginEconomyAction(): Boolean {
+        val state = _uiState.value
+        if (state.economyActionInFlight || state.adActionStatus == AdActionStatus.LOADING) return false
+        _uiState.update { it.copy(economyActionInFlight = true) }
+        return true
+    }
+
+    private suspend fun authorizeCoinOrRewardedAction(
+        cost: Int,
+        placement: String,
+    ): EconomyPaymentSource? = when (economyPaymentSource(_uiState.value.coinBalance, cost)) {
+        EconomyPaymentSource.COINS -> {
+            if (!progress.spendCoins(cost)) {
                 refreshProgress()
+                null
             } else {
-                _uiState.update { it.copy(adActionStatus = AdActionStatus.LOADING) }
-                analytics.record(AnalyticsEvent.AD_REQUEST, mapOf("placement" to "hint"))
-                var transactionId: String? = null
-                val adResult = ads.showRewarded { transactionId = it }
-                analytics.record(AnalyticsEvent.AD_RESULT, mapOf("placement" to "hint", "result" to adResult.name))
-                val authorized = adResult == AdResult.SHOWN && transactionId?.let { progress.claimAdAction(it, "hint") } == true
-                if (!authorized) {
-                    _uiState.update { it.copy(adActionStatus = AdActionStatus.UNAVAILABLE, hintStatus = HintStatus.IDLE) }
-                    return@launch
-                }
+                refreshProgress()
                 _uiState.update { it.copy(adActionStatus = AdActionStatus.IDLE) }
+                EconomyPaymentSource.COINS
             }
-            _uiState.update { it.copy(hintStatus = HintStatus.SEARCHING, hintDirection = null) }
-            val report = withContext(Dispatchers.Default) { MazeBloomSolver.solve(level, state, SolveMode.FROM_CURRENT_STATE) }
-            val status = when (report.status) {
-                SolveStatus.SOLVED -> HintStatus.DIRECTION
-                SolveStatus.UNSOLVABLE -> HintStatus.DOOMED
-                SolveStatus.BUDGET_EXCEEDED -> HintStatus.UNAVAILABLE
+        }
+        EconomyPaymentSource.REWARDED_AD -> {
+            _uiState.update { it.copy(adActionStatus = AdActionStatus.LOADING) }
+            analytics.record(AnalyticsEvent.AD_REQUEST, mapOf("placement" to placement))
+            var transactionId: String? = null
+            val adResult = ads.showRewarded { transactionId = it }
+            analytics.record(AnalyticsEvent.AD_RESULT, mapOf("placement" to placement, "result" to adResult.name))
+            val authorized = adResult == AdResult.SHOWN &&
+                transactionId?.let { progress.claimAdAction(it, placement) } == true
+            _uiState.update {
+                it.copy(adActionStatus = if (authorized) AdActionStatus.IDLE else AdActionStatus.UNAVAILABLE)
             }
-            _uiState.update { it.copy(hintStatus = status, hintDirection = report.canonicalSolution.firstOrNull()) }
-            if (status == HintStatus.DIRECTION) analytics.record(AnalyticsEvent.HINT_SHOWN, mapOf("level_id" to level.id))
+            EconomyPaymentSource.REWARDED_AD.takeIf { authorized }
         }
     }
 
@@ -515,28 +569,23 @@ class MazeBloomViewModel(
     fun skipLevel() {
         val level = _uiState.value.gameLevel ?: return
         val progressive = _uiState.value.isProgressive
-        if (_uiState.value.isDaily || (!progressive && level.campaignOrder !in 1 until 2_000) || _uiState.value.adActionStatus == AdActionStatus.LOADING) return
+        if (_uiState.value.isDaily || (!progressive && level.campaignOrder !in 1 until 2_000) || !beginEconomyAction()) return
         viewModelScope.launch {
-            _uiState.update { it.copy(adActionStatus = AdActionStatus.LOADING) }
-            analytics.record(AnalyticsEvent.AD_REQUEST, mapOf("placement" to "skip_level"))
-            var transactionId: String? = null
-            val result = ads.showRewarded { transactionId = it }
-            analytics.record(AnalyticsEvent.AD_RESULT, mapOf("placement" to "skip_level", "result" to result.name))
-            val authorized = result == AdResult.SHOWN && transactionId?.let { progress.claimAdAction(it, "skip_level") } == true
-            if (!authorized) {
-                _uiState.update { it.copy(adActionStatus = AdActionStatus.UNAVAILABLE) }
-                return@launch
-            }
-            progress.skipLevel(level)
-            refreshProgress()
-            _uiState.update { it.copy(adActionStatus = AdActionStatus.IDLE) }
-            if (progressive) {
-                val next = _uiState.value.endlessOrdinal + 1L
-                endlessRepository.replenish(next)
-                refreshEndless()
-                openEndlessLevel(next)
-            } else {
-                content.catalog.levels.getOrNull(level.campaignOrder)?.let { openCampaignLevel(it) }
+            try {
+                if (authorizeCoinOrRewardedAction(SKIP_LEVEL_COST, "skip_level") == null) return@launch
+                if ((_uiState.value.screen as? AppScreen.Game)?.levelId != level.id || _uiState.value.gameState?.status == GameStatus.SOLVED) return@launch
+                progress.skipLevel(level)
+                refreshProgress()
+                if (progressive) {
+                    val next = _uiState.value.endlessOrdinal + 1L
+                    endlessRepository.replenish(next)
+                    refreshEndless()
+                    openEndlessLevel(next)
+                } else {
+                    content.catalog.levels.getOrNull(level.campaignOrder)?.let { openCampaignLevel(it) }
+                }
+            } finally {
+                _uiState.update { it.copy(economyActionInFlight = false) }
             }
         }
     }
@@ -599,8 +648,8 @@ class MazeBloomViewModel(
         }
     }
 
-    private suspend fun showPendingInterstitial() {
-        persistenceJob?.join()
+    private suspend fun showPendingInterstitial(waitForPersistence: Boolean = true) {
+        if (waitForPersistence) persistenceJob?.join()
         if (!progress.takeInterstitialDue()) return
         analytics.record(AnalyticsEvent.AD_REQUEST, mapOf("placement" to "five_level_interstitial"))
         val result = ads.showInterstitial()
@@ -642,5 +691,10 @@ class MazeBloomViewModel(
             MazeBloomViewModel(content, progress, endlessRepository, dateSource, analytics, ads, consent) as T
     }
 
-    companion object { const val HINT_COST = 30 }
+    companion object {
+        const val DAILY_COIN_GRANT = 30
+        const val HINT_COST = 30
+        const val UNDO_COST = 30
+        const val SKIP_LEVEL_COST = 50
+    }
 }
