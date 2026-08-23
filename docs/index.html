@@ -1,0 +1,266 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="MazeBloom Privacy Policy: local game data, optional advertising services, sharing, retention, deletion, and privacy choices.">
+  <meta name="theme-color" content="#214f3b">
+  <meta name="color-scheme" content="light dark">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; upgrade-insecure-requests">
+  <title>MazeBloom Privacy Policy</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --canvas: #f6f1df;
+      --surface: #fffaf0;
+      --surface-soft: #e9f0e5;
+      --ink: #18362a;
+      --muted: #53655b;
+      --accent: #2d7153;
+      --accent-strong: #174b36;
+      --line: #c8d3c7;
+      --focus: #a5512f;
+      --shadow: 0 18px 55px rgba(35, 65, 49, .12);
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 8% 8%, rgba(119, 161, 114, .19), transparent 27rem),
+        var(--canvas);
+      color: var(--ink);
+      font-family: ui-rounded, "SF Pro Rounded", "Segoe UI", system-ui, -apple-system, sans-serif;
+      font-size: 1rem;
+      line-height: 1.7;
+    }
+    a { color: var(--accent-strong); text-underline-offset: .18em; }
+    a:hover { text-decoration-thickness: .15em; }
+    a:focus-visible, summary:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 4px;
+      border-radius: .2rem;
+    }
+    .skip-link {
+      position: fixed;
+      z-index: 10;
+      top: .75rem;
+      left: .75rem;
+      transform: translateY(-180%);
+      padding: .7rem 1rem;
+      border-radius: .6rem;
+      background: var(--ink);
+      color: var(--surface);
+    }
+    .skip-link:focus { transform: translateY(0); }
+    header, main, footer { width: min(100% - 2rem, 72rem); margin-inline: auto; }
+    header { padding: clamp(3.5rem, 9vw, 7rem) 0 2rem; }
+    .eyebrow {
+      display: inline-block;
+      margin: 0 0 .65rem;
+      color: var(--accent);
+      font-size: .82rem;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+    h1, h2, h3 { line-height: 1.18; text-wrap: balance; }
+    h1 { max-width: 14ch; margin: 0; font-size: clamp(2.6rem, 7vw, 5.6rem); letter-spacing: -.055em; }
+    h2 { margin: 0 0 .85rem; font-size: clamp(1.55rem, 3vw, 2.2rem); letter-spacing: -.025em; }
+    h3 { margin: 1.6rem 0 .45rem; font-size: 1.12rem; }
+    .lede { max-width: 46rem; margin: 1.25rem 0 1.3rem; color: var(--muted); font-size: clamp(1.08rem, 2vw, 1.28rem); }
+    .meta { display: flex; flex-wrap: wrap; gap: .55rem 1.2rem; color: var(--muted); font-size: .92rem; }
+    .layout { display: grid; grid-template-columns: minmax(13rem, 18rem) minmax(0, 1fr); gap: 2rem; align-items: start; }
+    nav {
+      position: sticky;
+      top: 1rem;
+      padding: 1.25rem;
+      border: 1px solid var(--line);
+      border-radius: 1rem;
+      background: color-mix(in srgb, var(--surface) 92%, transparent);
+    }
+    nav strong { display: block; margin-bottom: .55rem; }
+    nav ol { margin: 0; padding-left: 1.25rem; }
+    nav li + li { margin-top: .35rem; }
+    .policy-body { min-width: 0; }
+    section {
+      margin-bottom: 1.1rem;
+      padding: clamp(1.25rem, 4vw, 2.4rem);
+      border: 1px solid var(--line);
+      border-radius: 1.25rem;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      scroll-margin-top: 1rem;
+    }
+    .summary {
+      border-color: #99b49e;
+      background: linear-gradient(140deg, var(--surface-soft), var(--surface));
+    }
+    p, ul { margin-top: .55rem; }
+    ul { padding-left: 1.35rem; }
+    li + li { margin-top: .4rem; }
+    .data-list { display: grid; gap: .8rem; margin-top: 1rem; }
+    .data-item { padding: 1rem; border-left: .3rem solid var(--accent); border-radius: .4rem; background: var(--surface-soft); }
+    .data-item strong { display: block; }
+    .callout { margin-top: 1rem; padding: 1rem 1.1rem; border-radius: .8rem; background: var(--surface-soft); }
+    footer { padding: 1.5rem 0 4rem; color: var(--muted); font-size: .9rem; }
+    @media (max-width: 48rem) {
+      .layout { grid-template-columns: 1fr; }
+      nav { position: static; }
+      nav ol { columns: 2; column-gap: 2rem; }
+    }
+    @media (max-width: 32rem) {
+      header, main, footer { width: min(100% - 1.25rem, 72rem); }
+      nav ol { columns: 1; }
+      section { border-radius: .9rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --canvas: #10241b;
+        --surface: #172d23;
+        --surface-soft: #213b2f;
+        --ink: #edf6ed;
+        --muted: #b7c9bc;
+        --accent: #91d0a3;
+        --accent-strong: #b9e8c4;
+        --line: #3b5849;
+        --focus: #f3a47c;
+        --shadow: 0 18px 55px rgba(0, 0, 0, .24);
+      }
+    }
+    @media print {
+      body { background: #fff; color: #111; font-size: 10pt; }
+      header, main, footer { width: 100%; }
+      header { padding-top: 0; }
+      .layout { display: block; }
+      nav { display: none; }
+      section { break-inside: avoid; box-shadow: none; border-color: #bbb; }
+      a { color: inherit; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#policy">Skip to policy</a>
+  <header>
+    <p class="eyebrow">Privacy, in plain language</p>
+    <h1 id="policy-title">MazeBloom Privacy Policy</h1>
+    <p class="lede">MazeBloom is designed as an offline puzzle game. Your puzzles, progress, settings, and generated Endless Garden history stay on your device. An ad-supported build may use Google services only as described below.</p>
+    <div class="meta" role="group" aria-label="Policy metadata">
+      <span>Effective: 23 August 2026</span>
+      <span>Last updated: 23 August 2026</span>
+      <span>Android package: com.rameshta.mazebloom</span>
+    </div>
+  </header>
+
+  <main id="policy" class="layout">
+    <nav aria-label="Policy contents">
+      <strong>On this page</strong>
+      <ol>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#local-data">Data on your device</a></li>
+        <li><a href="#ads">Optional ads</a></li>
+        <li><a href="#sharing">Sharing</a></li>
+        <li><a href="#permissions">Permissions</a></li>
+        <li><a href="#retention">Retention and deletion</a></li>
+        <li><a href="#security">Security</a></li>
+        <li><a href="#children">Children</a></li>
+        <li><a href="#choices">Your choices</a></li>
+        <li><a href="#changes">Changes</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ol>
+    </nav>
+
+    <div class="policy-body">
+      <section id="overview" class="summary">
+        <h2>1. Overview</h2>
+        <p>MazeBloom does not require an account and does not ask for your name, email address, contacts, precise location, photos, microphone, or camera. The developer does not operate an analytics server for the app.</p>
+        <p>The Play Store may offer either an offline build without advertising libraries or an ad-supported build that uses Google Mobile Ads and Google User Messaging Platform (UMP). The store listing identifies whether the installed version contains ads.</p>
+      </section>
+
+      <section id="local-data">
+        <h2>2. Data stored on your device</h2>
+        <p>MazeBloom stores only the information needed to run the game locally:</p>
+        <div class="data-list">
+          <div class="data-item"><strong>Game progress</strong>Completed and skipped levels, stars, best move counts, replays, unlocked content, coin balance, daily streaks, and an unfinished attempt.</div>
+          <div class="data-item"><strong>Preferences</strong>Theme, sound, haptics, reduced motion, high contrast, and direction-control settings.</div>
+          <div class="data-item"><strong>Endless Garden history</strong>Generated puzzle definitions, certification records, fingerprints, and local history used to avoid repeats.</div>
+          <div class="data-item"><strong>Reward integrity</strong>Random transaction identifiers for rewarded-ad callbacks, stored locally to prevent a reward from being applied twice.</div>
+        </div>
+        <p>This data is stored in the app's private Android storage. It is not uploaded to the developer. Android cloud backup and device-transfer backup are disabled for MazeBloom so that its local puzzle history is not copied by the app's backup configuration.</p>
+      </section>
+
+      <section id="ads">
+        <h2>3. Optional advertising and consent services</h2>
+        <p>The offline release does not package the Google Mobile Ads or UMP libraries and does not request internet, network-state, advertising-ID, or Privacy Sandbox ad permissions.</p>
+        <p>If the ad-supported production build is installed, it uses Google Mobile Ads SDK 25.4.0 and UMP SDK 4.0.0. UMP refreshes consent information before the ads SDK is initialized or an ad is requested. Where required, UMP displays a consent message and a privacy-options entry is available in MazeBloom Settings.</p>
+        <p>Google states that its Mobile Ads SDK automatically collects and shares the following for advertising, analytics, and fraud prevention:</p>
+        <ul>
+          <li>IP address, which may be used to estimate general location;</li>
+          <li>user product interactions such as app launches, taps, and video views;</li>
+          <li>diagnostic information such as launch time, hang rate, and energy usage; and</li>
+          <li>device or account identifiers, including the Android advertising ID and app set ID where available.</li>
+        </ul>
+        <p>Google says this data is encrypted in transit. Google and participating advertising partners process advertising data under their own terms and policies. MazeBloom does not add developer-operated analytics or sell player data.</p>
+        <div class="callout"><strong>Learn more:</strong> <a href="https://developers.google.com/admob/android/privacy/play-data-disclosure" rel="external noreferrer">Google Mobile Ads data disclosure</a>, <a href="https://policies.google.com/privacy" rel="external noreferrer">Google Privacy Policy</a>, and <a href="https://policies.google.com/technologies/ads" rel="external noreferrer">How Google uses information for advertising</a>.</div>
+      </section>
+
+      <section id="sharing">
+        <h2>4. Sharing a result</h2>
+        <p>When you choose Share, MazeBloom creates a puzzle-result image in its cache and opens Android's system share sheet. Nothing is shared until you select another app or destination. The selected service receives the image and short share text under that service's own privacy policy. MazeBloom does not receive the recipient list or a record of where you shared it.</p>
+      </section>
+
+      <section id="permissions">
+        <h2>5. App permissions</h2>
+        <p>The offline release requires no sensitive Android permissions. It grants temporary, read-only access to a generated share image only to the app you select in the Android share sheet.</p>
+        <p>The ad-supported build may declare internet and network-state access plus advertising-related permissions supplied by the Google Mobile Ads SDK. MazeBloom does not request contacts, camera, microphone, photos, files, phone, SMS, or precise-location permission.</p>
+      </section>
+
+      <section id="retention">
+        <h2>6. Retention and deletion</h2>
+        <p>Local game data remains until you clear MazeBloom's storage in Android Settings or uninstall the app. Cached share images may be removed by Android automatically and are deleted with app storage. Clearing storage or uninstalling also erases Endless Garden uniqueness history, so previously generated puzzles may appear again after a fresh install.</p>
+        <p>Because MazeBloom has no developer account or cloud profile, there is no server-side player account to delete. For an ad-supported build, Google and its partners control retention of data they process; use the privacy options in MazeBloom Settings, Android's advertising controls, and the links above for applicable choices or deletion requests.</p>
+      </section>
+
+      <section id="security">
+        <h2>7. Security</h2>
+        <p>MazeBloom stores gameplay data in app-private storage, disables app backup and device transfer, blocks cleartext network traffic, and uses no developer-operated data backend. Google states that Mobile Ads data is protected in transit using TLS. No method of storage or transmission is completely risk-free, but the app limits collection and network access by design.</p>
+      </section>
+
+      <section id="children">
+        <h2>8. Children</h2>
+        <p>MazeBloom is not directed to children under 13, and the current ad-supported implementation is not configured as a mixed-audience or child-directed service. The app does not knowingly ask children for personal information. If a future release is offered to age groups that include children, its advertising and consent configuration, store declarations, and this policy must be updated before publication.</p>
+      </section>
+
+      <section id="choices">
+        <h2>9. Your choices</h2>
+        <ul>
+          <li>Play the offline release without an account or developer-operated network service.</li>
+          <li>Decline or adjust advertising choices when UMP presents them, where available.</li>
+          <li>Open <strong>Settings → Privacy and purchases → Privacy options</strong> when the ad-supported build says the control is required.</li>
+          <li>Reset or delete the Android advertising ID in your device's privacy settings.</li>
+          <li>Do not use Share, or cancel the Android share sheet, if you do not want to send a result to another service.</li>
+          <li>Delete all MazeBloom local data by clearing app storage or uninstalling the app.</li>
+        </ul>
+      </section>
+
+      <section id="changes">
+        <h2>10. Changes to this policy</h2>
+        <p>This policy may change when MazeBloom's features, vendors, or legal obligations change. Material changes will be reflected by a new “Last updated” date and, when appropriate, an in-app or store-listing notice. The current policy applies to the current release.</p>
+      </section>
+
+      <section id="contact">
+        <h2>11. Developer and privacy contact</h2>
+        <p>MazeBloom is developed and published by <strong>Naimish Gupta</strong>.</p>
+        <p>For privacy questions or requests, email <a href="mailto:naimishgupta983842377@gmail.com">naimishgupta983842377@gmail.com</a>. Please do not include sensitive personal information. Requests are reviewed and answered as required by applicable law.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <p>© 2026 Naimish Gupta · MazeBloom · Privacy Policy</p>
+  </footer>
+</body>
+</html>

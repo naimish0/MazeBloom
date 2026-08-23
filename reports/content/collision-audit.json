@@ -1,0 +1,126 @@
+{
+  "profileVersion": 2,
+  "grandfatheredLegacyCollisions": [
+    {
+      "leftId": "campaign-001",
+      "rightId": "campaign-002",
+      "leftPriorityKey": 1,
+      "rightPriorityKey": 2,
+      "collisionTier": "HARD",
+      "transformId": 0,
+      "maskDistance": 2,
+      "stoneDistance": 0,
+      "budDistance": 2,
+      "startDistance": 0,
+      "matchedPatterns": [
+        "direction",
+        "stop"
+      ],
+      "reasonCode": "GRANDFATHERED_LEGACY_COLLISION:MASK_DISTANCE_6"
+    },
+    {
+      "leftId": "campaign-001",
+      "rightId": "campaign-003",
+      "leftPriorityKey": 1,
+      "rightPriorityKey": 3,
+      "collisionTier": "REVIEW",
+      "transformId": 3,
+      "maskDistance": 12,
+      "stoneDistance": 4,
+      "budDistance": 6,
+      "startDistance": 2,
+      "matchedPatterns": [],
+      "reasonCode": "GRANDFATHERED_LEGACY_COLLISION:REVIEW_MASK_DISTANCE_12"
+    },
+    {
+      "leftId": "campaign-001",
+      "rightId": "campaign-005",
+      "leftPriorityKey": 1,
+      "rightPriorityKey": 5,
+      "collisionTier": "REVIEW",
+      "transformId": 2,
+      "maskDistance": 9,
+      "stoneDistance": 5,
+      "budDistance": 2,
+      "startDistance": 2,
+      "matchedPatterns": [],
+      "reasonCode": "GRANDFATHERED_LEGACY_COLLISION:REVIEW_MASK_DISTANCE_12"
+    },
+    {
+      "leftId": "campaign-002",
+      "rightId": "campaign-003",
+      "leftPriorityKey": 2,
+      "rightPriorityKey": 3,
+      "collisionTier": "REVIEW",
+      "transformId": 6,
+      "maskDistance": 10,
+      "stoneDistance": 4,
+      "budDistance": 4,
+      "startDistance": 2,
+      "matchedPatterns": [],
+      "reasonCode": "GRANDFATHERED_LEGACY_COLLISION:REVIEW_MASK_DISTANCE_12"
+    },
+    {
+      "leftId": "campaign-002",
+      "rightId": "campaign-005",
+      "leftPriorityKey": 2,
+      "rightPriorityKey": 5,
+      "collisionTier": "REVIEW",
+      "transformId": 2,
+      "maskDistance": 11,
+      "stoneDistance": 5,
+      "budDistance": 4,
+      "startDistance": 2,
+      "matchedPatterns": [],
+      "reasonCode": "GRANDFATHERED_LEGACY_COLLISION:REVIEW_MASK_DISTANCE_12"
+    },
+    {
+      "leftId": "campaign-003",
+      "rightId": "campaign-004",
+      "leftPriorityKey": 3,
+      "rightPriorityKey": 4,
+      "collisionTier": "REVIEW",
+      "transformId": 0,
+      "maskDistance": 11,
+      "stoneDistance": 1,
+      "budDistance": 8,
+      "startDistance": 2,
+      "matchedPatterns": [],
+      "reasonCode": "GRANDFATHERED_LEGACY_COLLISION:REVIEW_MASK_DISTANCE_12"
+    },
+    {
+      "leftId": "campaign-003",
+      "rightId": "campaign-005",
+      "leftPriorityKey": 3,
+      "rightPriorityKey": 5,
+      "collisionTier": "HARD",
+      "transformId": 0,
+      "maskDistance": 5,
+      "stoneDistance": 1,
+      "budDistance": 4,
+      "startDistance": 0,
+      "matchedPatterns": [
+        "direction",
+        "stop"
+      ],
+      "reasonCode": "GRANDFATHERED_LEGACY_COLLISION:MASK_DISTANCE_6"
+    },
+    {
+      "leftId": "campaign-004",
+      "rightId": "campaign-005",
+      "leftPriorityKey": 4,
+      "rightPriorityKey": 5,
+      "collisionTier": "HARD",
+      "transformId": 0,
+      "maskDistance": 10,
+      "stoneDistance": 0,
+      "budDistance": 8,
+      "startDistance": 2,
+      "matchedPatterns": [
+        "pickup"
+      ],
+      "reasonCode": "GRANDFATHERED_LEGACY_COLLISION:MASK_DISTANCE_12_BEHAVIOR"
+    }
+  ],
+  "illegalNewCollisions": []
+}

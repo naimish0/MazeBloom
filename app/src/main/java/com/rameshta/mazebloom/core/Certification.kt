@@ -3,6 +3,20 @@ package com.rameshta.mazebloom.core
 import java.security.MessageDigest
 
 enum class D4Transform { I, R, R2, R3, M, MR, MR2, MR3 }
+enum class SimilarityTier { NONE, REVIEW, HARD }
+
+data class SimilarityResult(
+    val tier: SimilarityTier,
+    val transform: D4Transform? = null,
+    val maskDistance: Int? = null,
+    val stoneDistance: Int? = null,
+    val budDistance: Int? = null,
+    val startDistance: Int? = null,
+    val directionPatternMatches: Boolean = false,
+    val pickupPatternMatches: Boolean = false,
+    val stopPatternMatches: Boolean = false,
+    val reasonCode: String = "NONE",
+)
 
 object LevelFingerprints {
     fun transformCell(cell: Int, size: Int, transform: D4Transform): Int {
@@ -94,58 +108,180 @@ object LevelFingerprints {
         return sha256(encodings.min())
     }
 
-    fun isHardNearDuplicate(first: LevelDefinition, second: LevelDefinition): Boolean {
-        if (first.width != second.width) return false
-        data class Alignment(val transform: D4Transform, val distance: Int)
+    fun compareSimilarity(first: LevelDefinition, second: LevelDefinition): SimilarityResult {
+        val structuralMatch = structuralSignature(first) == structuralSignature(second)
+        val grammarMatch = solutionGrammarFingerprint(first) == solutionGrammarFingerprint(second)
+        if (structuralMatch || grammarMatch) {
+            return SimilarityResult(
+                tier = SimilarityTier.HARD,
+                reasonCode = if (structuralMatch) "STRUCTURAL_SIGNATURE" else "SOLUTION_GRAMMAR",
+            )
+        }
+        if (first.width != second.width || first.height != second.height) return SimilarityResult(SimilarityTier.NONE)
+        data class Alignment(
+            val transform: D4Transform,
+            val distance: Int,
+            val stones: Int,
+            val buds: Int,
+            val start: Int,
+            val directionMatch: Boolean,
+            val pickupMatch: Boolean,
+            val stopMatch: Boolean,
+            val transformedEncoding: String,
+        )
+        val firstPattern = replayPattern(first)
+        val secondPattern = replayPattern(second)
         val alignments = D4Transform.entries.map { transform ->
             val walls = CellMask.of(second.staticWalls.cells(second.width * second.height).map { transformCell(it, second.width, transform) })
             val buds = CellMask.of(second.initialBuds.cells(second.width * second.height).map { transformCell(it, second.width, transform) })
             val start = transformCell(second.startCell, second.width, transform)
+            val stoneDistance = (first.staticWalls.bits xor walls.bits).countOneBits()
+            val budDistance = 2 * (first.initialBuds.bits xor buds.bits).countOneBits()
+            val startDistance = if (first.startCell == start) 0 else 2
             Alignment(
                 transform,
-                (first.staticWalls.bits xor walls.bits).countOneBits() +
-                    2 * (first.initialBuds.bits xor buds.bits).countOneBits() +
-                    if (first.startCell == start) 0 else 2,
+                stoneDistance + budDistance + startDistance,
+                stoneDistance,
+                budDistance,
+                startDistance,
+                first.canonicalReplay == second.canonicalReplay.map { transformDirection(it, transform) },
+                firstPattern.pickups == secondPattern.pickups,
+                firstPattern.stops == secondPattern.stops,
+                "${walls.cells(first.width * first.height)}|$start|${buds.cells(first.width * first.height)}",
             )
         }
         val minimum = alignments.minOf { it.distance }
-        if (minimum > 2) return false
-        val firstPattern = replayPattern(first)
-        val secondPattern = replayPattern(second)
-        if (firstPattern.first != secondPattern.first || firstPattern.second != secondPattern.second) return false
-        return alignments.filter { it.distance == minimum }.any { alignment ->
-            first.canonicalReplay == second.canonicalReplay.map { transformDirection(it, alignment.transform) }
+        val chosen = alignments.filter { it.distance == minimum }.sortedWith(
+            compareByDescending<Alignment> { listOf(it.directionMatch, it.pickupMatch, it.stopMatch).count(Boolean::not).let { count -> 3 - count } }
+                .thenBy { it.transformedEncoding }
+                .thenBy { it.transform.ordinal },
+        ).first()
+        val matched = listOf(chosen.directionMatch, chosen.pickupMatch, chosen.stopMatch).count { it }
+        val tier = when {
+            minimum <= 6 -> SimilarityTier.HARD
+            minimum <= 12 && matched >= 1 -> SimilarityTier.HARD
+            minimum <= 18 && matched >= 2 -> SimilarityTier.HARD
+            minimum <= 12 -> SimilarityTier.REVIEW
+            minimum <= 18 && matched == 1 -> SimilarityTier.REVIEW
+            else -> SimilarityTier.NONE
         }
+        val reason = when {
+            tier == SimilarityTier.HARD && minimum <= 6 -> "MASK_DISTANCE_6"
+            tier == SimilarityTier.HARD && minimum <= 12 -> "MASK_DISTANCE_12_BEHAVIOR"
+            tier == SimilarityTier.HARD -> "MASK_DISTANCE_18_TWO_BEHAVIORS"
+            tier == SimilarityTier.REVIEW && minimum <= 12 -> "REVIEW_MASK_DISTANCE_12"
+            tier == SimilarityTier.REVIEW -> "REVIEW_MASK_DISTANCE_18_BEHAVIOR"
+            else -> "NONE"
+        }
+        return SimilarityResult(
+            tier = tier,
+            transform = chosen.transform,
+            maskDistance = minimum,
+            stoneDistance = chosen.stones,
+            budDistance = chosen.buds,
+            startDistance = chosen.start,
+            directionPatternMatches = chosen.directionMatch,
+            pickupPatternMatches = chosen.pickupMatch,
+            stopPatternMatches = chosen.stopMatch,
+            reasonCode = reason,
+        )
     }
 
-    private fun replayPattern(level: LevelDefinition): Pair<List<Int>, List<StopSource?>> {
+    fun isHardNearDuplicate(first: LevelDefinition, second: LevelDefinition): Boolean =
+        compareSimilarity(first, second).tier == SimilarityTier.HARD
+
+    fun isStrictDuplicate(first: LevelDefinition, second: LevelDefinition): Boolean =
+        compareSimilarity(first, second).tier != SimilarityTier.NONE
+
+    private data class ReplayPattern(
+        val pickups: List<Int>,
+        val stops: List<StopSource?>,
+        val slideLengths: List<Int>,
+        val newBloomCounts: List<Int>,
+        val remainingBudCounts: List<Int>,
+        val creatorUseDistances: List<Int>,
+    )
+
+    private fun replayPattern(level: LevelDefinition): ReplayPattern {
         var state = MazeBloomRules.initialState(level)
         val pickups = mutableListOf<Int>()
         val stops = mutableListOf<StopSource?>()
-        level.canonicalReplay.forEach { direction ->
+        val lengths = mutableListOf<Int>()
+        val blooms = mutableListOf<Int>()
+        val remaining = mutableListOf<Int>()
+        val dependencies = mutableListOf<Int>()
+        val createdAt = mutableMapOf<Int, Int>()
+        level.canonicalReplay.forEachIndexed { moveIndex, direction ->
             val result = MazeBloomRules.transition(level, state, direction)
             pickups += result.newlyCollectedBuds.size
             stops += result.stopSource
+            lengths += result.traversedPath.size
+            blooms += result.newBloomCells.size
+            remaining += result.afterState.remainingBuds.count()
+            val blocker = MazeBloomRules.neighbor(level, result.afterState.seedCell, direction)
+            dependencies += if (result.stopSource == StopSource.BLOOM && blocker != null) {
+                moveIndex - (createdAt[blocker] ?: moveIndex)
+            } else 0
+            result.newBloomCells.forEach { createdAt[it] = moveIndex }
             state = result.afterState
         }
-        return pickups to stops
+        return ReplayPattern(pickups, stops, lengths, blooms, remaining, dependencies)
     }
 
-    fun replayChecksum(level: LevelDefinition, directions: List<Direction>): String = sha256(
-        "replay-v1|${level.id}|${level.contentVersion}|${level.rulesVersion}|${directions.joinToString(",") { it.name }}"
+    fun structuralSignature(level: LevelDefinition): String {
+        val pattern = replayPattern(level)
+        val encodings = D4Transform.entries.map { transform ->
+            level.canonicalReplay.indices.joinToString("|") { index ->
+                listOf(
+                    transformDirection(level.canonicalReplay[index], transform).name,
+                    pattern.slideLengths[index], pattern.pickups[index], pattern.stops[index]?.name,
+                    pattern.creatorUseDistances[index], pattern.newBloomCounts[index], pattern.remainingBudCounts[index],
+                ).joinToString(":")
+            }
+        }
+        return sha256(encodings.min())
+    }
+
+    fun solutionGrammarFingerprint(level: LevelDefinition): String {
+        val pattern = replayPattern(level)
+        val encodings = D4Transform.entries.map { transform ->
+            "${level.canonicalReplay.joinToString(",") { transformDirection(it, transform).name }}|" +
+                "${pattern.pickups.joinToString(",")}|${pattern.stops.joinToString(",") { it?.name.orEmpty() }}"
+        }
+        return sha256(encodings.min())
+    }
+
+    fun definitionHash(level: LevelDefinition): String = hashFields(
+        listOf(
+            "definition-v2", level.schemaVersion, level.contentVersion, level.id, level.campaignOrder,
+            level.gardenId, level.chapterId, level.chapterOrderWithinGarden, level.width, level.height,
+            level.staticWalls.cells(level.width * level.height).joinToString(","), level.startCell,
+            level.initialBuds.cells(level.width * level.height).joinToString(","), level.generatorVersion,
+            level.generatorSeed,
+        ),
     )
 
-    fun certificationChecksum(level: LevelDefinition, solution: SolutionReport): String = sha256(
+    fun replayChecksum(level: LevelDefinition, directions: List<Direction>): String = hashFields(
+        listOf("replay-v1", level.id, level.contentVersion, level.rulesVersion, directions.joinToString(",") { it.name }),
+    )
+
+    fun certificationChecksum(level: LevelDefinition, solution: SolutionReport): String = hashFields(
         listOf(
             "cert-v1", level.schemaVersion, level.contentVersion, level.rulesVersion, level.solverVersion,
             level.generatorVersion, level.certificationProfileVersion, level.fingerprintVersion, level.id,
-            level.campaignOrder, level.chapter, level.generatorSeed, level.width, level.height,
+            level.campaignOrder, level.gardenId, level.chapterId, level.chapterOrderWithinGarden,
+            level.generatorSeed, level.width, level.height,
             level.staticWalls.cells(level.width * level.height).joinToString(","), level.startCell,
             level.initialBuds.cells(level.width * level.height).joinToString(","), solution.optimalMoves,
             solution.canonicalSolution.joinToString(",") { it.name }, solution.optimalSolutionCount,
             solution.optimalCountOverflow, solution.expandedStates, solution.discoveredStates, geometricFingerprint(level),
-        ).joinToString("|")
+        ),
     )
+
+    private fun hashFields(fields: List<Any?>): String = sha256(fields.joinToString("") { field ->
+        val value = field.toString()
+        "${value.toByteArray(Charsets.UTF_8).size}:$value"
+    })
 
     fun sha256(value: String): String = MessageDigest.getInstance("SHA-256")
         .digest(value.toByteArray(Charsets.UTF_8))

@@ -19,6 +19,12 @@ object LevelJsonCodec {
         require(stones == stones.sorted() && stones.distinct().size == stones.size) { "stones must be sorted and unique" }
         require(buds == buds.sorted() && buds.distinct().size == buds.size) { "buds must be sorted and unique" }
         val difficultyName = string(source, "difficulty")
+        val campaignOrder = integer(source, "campaignOrder")
+        val chapter = integer(source, "chapter")
+        val gardenId = stringOrNull(source, "gardenId")
+            ?: if (campaignOrder > 0) "garden-${(((campaignOrder - 1) / 100) + 1).toString().padStart(2, '0')}" else "daily"
+        val chapterOrderWithinGarden = integerOrNull(source, "chapterOrderWithinGarden")
+            ?: if (campaignOrder > 0) (campaignOrder - 1) % 100 / 20 + 1 else 0
         val level = LevelDefinition(
             id = string(source, "id"),
             schemaVersion = integer(source, "schemaVersion"),
@@ -29,8 +35,12 @@ object LevelJsonCodec {
             staticWalls = CellMask.of(stones),
             startCell = integer(source, "start"),
             initialBuds = CellMask.of(buds),
-            chapter = integer(source, "chapter"),
-            campaignOrder = integer(source, "campaignOrder"),
+            chapter = chapter,
+            campaignOrder = campaignOrder,
+            gardenId = gardenId,
+            chapterId = stringOrNull(source, "chapterId")
+                ?: if (campaignOrder > 0) "$gardenId/chapter-${chapterOrderWithinGarden.toString().padStart(2, '0')}" else "daily",
+            chapterOrderWithinGarden = chapterOrderWithinGarden,
             generatorVersion = integer(source, "generatorVersion"),
             generatorSeed = string(source, "generatorSeed"),
             solverVersion = integer(source, "solverVersion"),
@@ -59,6 +69,9 @@ object LevelJsonCodec {
             append(",\"buds\":").append(level.initialBuds.cells(level.width * level.height).joinToString(",", "[", "]"))
             append(",\"chapter\":").append(level.chapter)
             append(",\"campaignOrder\":").append(level.campaignOrder)
+            append(",\"gardenId\":\"").append(level.gardenId).append("\"")
+            append(",\"chapterId\":\"").append(level.chapterId).append("\"")
+            append(",\"chapterOrderWithinGarden\":").append(level.chapterOrderWithinGarden)
             append(",\"generatorVersion\":").append(level.generatorVersion)
             append(",\"generatorSeed\":\"").append(level.generatorSeed).append("\"")
             append(",\"solverVersion\":").append(level.solverVersion)
@@ -73,12 +86,16 @@ object LevelJsonCodec {
     }
 
     private fun string(source: String, field: String): String =
+        stringOrNull(source, field) ?: error("missing string field: $field")
+
+    private fun stringOrNull(source: String, field: String): String? =
         Regex("\\\"$field\\\":\\\"([^\\\"]*)\\\"").find(source)?.groupValues?.get(1)
-            ?: error("missing string field: $field")
 
     private fun integer(source: String, field: String): Int =
+        integerOrNull(source, field) ?: error("missing integer field: $field")
+
+    private fun integerOrNull(source: String, field: String): Int? =
         Regex("\\\"$field\\\":(-?[0-9]+)").find(source)?.groupValues?.get(1)?.toInt()
-            ?: error("missing integer field: $field")
 
     private fun intArray(source: String, field: String): List<Int> {
         val body = Regex("\\\"$field\\\":\\[([^]]*)]").find(source)?.groupValues?.get(1)

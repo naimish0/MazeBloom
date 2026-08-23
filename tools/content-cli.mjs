@@ -3,12 +3,16 @@ import { readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { audit, generateAll, geometricEncoding, solve, transition } from "./generate-content.mjs";
+import { audit, compareSimilarity, dynamicFingerprint, generateAll, geometricEncoding, prepareItem, replayStructure, solve, transition } from "./generate-content.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const contentDirectory = resolve(root, "app/src/main/assets/content");
-const records = ["campaign.jsonl", "daily.jsonl"].flatMap((name) =>
-  readFileSync(resolve(contentDirectory, name), "utf8").split("\n").filter(Boolean).map(JSON.parse));
+const catalog = JSON.parse(readFileSync(resolve(contentDirectory, "campaign/campaign-manifest.json"), "utf8"));
+const campaignRecords = catalog.gardens.flatMap((garden) => garden.chapters).flatMap((chapter) =>
+  JSON.parse(readFileSync(resolve(contentDirectory, chapter.shardPath.replace(/^content\//, "")), "utf8")).levels);
+const dailyRecords = readFileSync(resolve(contentDirectory, "daily.jsonl"), "utf8").split("\n").filter(Boolean).map(JSON.parse);
+const progressiveRecords = readFileSync(resolve(contentDirectory, "progressive.jsonl"), "utf8").split("\n").filter(Boolean).map(JSON.parse);
+const records = [...campaignRecords, ...dailyRecords, ...progressiveRecords];
 const bit = (cell) => 1n << BigInt(cell);
 const toMask = (values) => values.reduce((mask, cell) => mask | bit(cell), 0n);
 const internal = (record) => ({ size: record.width, walls: toMask(record.stones), start: record.start, buds: toMask(record.buds) });
@@ -36,13 +40,24 @@ const render = (level, state = { seed: level.start, bloom: 0n, buds: level.buds 
 switch (command) {
   case "generate":
   case "generate-campaign":
+  case "generate-garden":
   case "generate-daily-pool":
+  case "generate-progressive-pool":
     generateAll();
     break;
   case "verify":
-  case "certify":
-  case "certify-campaign": {
+  case "verify-bundled-content-fast":
+  case "verify-legacy-prefix": {
     const result = spawnSync(process.execPath, [resolve(root, "tools/verify-content.mjs")], { stdio: "inherit" });
+    process.exitCode = result.status ?? 1;
+    break;
+  }
+  case "certify":
+  case "certify-garden":
+  case "certify-campaign-incremental":
+  case "certify-campaign-full":
+  case "certify-campaign": {
+    const result = spawnSync(process.execPath, [resolve(root, "tools/verify-content.mjs"), "--full"], { stdio: "inherit" });
     process.exitCode = result.status ?? 1;
     break;
   }
@@ -82,8 +97,20 @@ switch (command) {
     if (duplicates.length) process.exitCode = 1;
     break;
   }
+  case "compare": {
+    const otherId = process.argv[4];
+    const otherRecord = records.find((value) => value.id === otherId);
+    if (!otherRecord) throw new Error(`Unknown comparison level ID: ${otherId}`);
+    const toItem = (value) => {
+      const level = internal(value);
+      const solution = solve(level);
+      return prepareItem({ id: value.id, campaignOrder: value.campaignOrder, level, solution, metrics: audit(level, solution), dynamic: dynamicFingerprint(level), structure: replayStructure(level, solution) });
+    };
+    console.log(JSON.stringify(compareSimilarity(toItem(record), toItem(otherRecord)), null, 2));
+    break;
+  }
   case "help":
-    console.log("MazeBloom content CLI: generate | solve <id> | analyze <id> | certify | dedupe | replay <id> | render <id> | verify");
+    console.log("MazeBloom content CLI: generate | generate-progressive-pool | solve <id> | analyze <id> | certify-campaign-full | compare <id> <other-id> | dedupe | replay <id> | render <id> | verify");
     break;
   default:
     throw new Error(`Unknown command: ${command}`);

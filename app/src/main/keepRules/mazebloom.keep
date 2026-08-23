@@ -1,0 +1,6 @@
+# Preserve useful line information for Play Console deobfuscation while hiding source file names.
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# Release builds retain warnings and errors, but remove verbose/debug/info logging from app code.
+-maximumremovedandroidloglevel 4 class com.rameshta.mazebloom.** { *; }

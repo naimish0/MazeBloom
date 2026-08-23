@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "recordCount": 2220,
+  "campaignRoot": "b072e72774dab836109b98a66d9bc0789f2b94f3054e5864d85df64c282f2b04",
+  "dailyContentRoot": "f36974d5a50d389dd42dbedbb0779129874d30af458c8374cb063b6adbd81c87",
+  "dailyAuditRoot": "6e1c8526123ca10cd77668dfbdea56db3acc08309188e2c428f484b61dc26eff",
+  "progressiveContentRoot": "6e756b18a03302ed52ddb9972ec96f4b282d596d8eb77831ba90e1dbe39ad33c",
+  "progressiveAuditRoot": "ce252d1bfd77c3979dacf5c8e6d3e6e15b8889998f59f3a16a9b9ca0cd58841f",
+  "progressiveUniquenessRoot": "6b74614fde1f53eba4689400d950233a77e8f928836a4390992689849743fc54",
+  "globalUniquenessRoot": "3b2cd45d7418d755a21e1fb00b8e760b685b2a68a0560148fa34bc2b3bc5e9de",
+  "certificationProfileVersion": 3,
+  "fingerprintVersion": 2,
+  "uniquenessProfileVersion": 2,
+  "expectedPairComparisons": "2463090",
+  "performedAlignmentComparisons": "11691120",
+  "collisionResult": "zero-new-collisions",
+  "endlessBaselineRoot": "cec815d9e353fc390ed5e2e8cc4d32f031f506adf6bb57bca7f726867f31a8cd"
+}

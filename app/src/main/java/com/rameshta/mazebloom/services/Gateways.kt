@@ -22,10 +22,11 @@ class FakeAdsGateway(
     var rewardedResult: AdResult = AdResult.SHOWN,
 ) : AdsGateway {
     private val grantedTransactions = mutableSetOf<String>()
+    private var rewardSequence = 0
     override suspend fun showInterstitial() = interstitialResult
     override suspend fun showRewarded(onVerifiedReward: (String) -> Unit): AdResult {
         if (rewardedResult == AdResult.SHOWN) {
-            val transaction = "fake-reward-1"
+            val transaction = "fake-reward-${++rewardSequence}"
             if (grantedTransactions.add(transaction)) onVerifiedReward(transaction)
         }
         return rewardedResult
@@ -54,34 +55,33 @@ class FakeBillingGateway(var entitled: Boolean = false) : BillingGateway {
 }
 
 interface ConsentGateway {
+    val enabled: Boolean
+    val privacyOptionsRequired: Boolean
     suspend fun resolve(): ConsentState
     suspend fun openPrivacyOptions(): Boolean
 }
 
 object NoOpConsentGateway : ConsentGateway {
+    override val enabled = false
+    override val privacyOptionsRequired = false
     override suspend fun resolve() = ConsentState.UNAVAILABLE
     override suspend fun openPrivacyOptions() = false
 }
 
 data class InterstitialContext(
-    val firstSession: Boolean,
-    val campaignOrder: Int,
     val successfulCompletion: Boolean,
-    val completedEligibleLevelsSinceAd: Int,
-    val secondsSinceAd: Long,
+    val completedLevels: Int,
     val removeAdsEntitled: Boolean,
-    val returningToGarden: Boolean,
+    val leavingCompletedLevel: Boolean,
 )
 
 object InterstitialPolicy {
     fun isEligible(context: InterstitialContext): Boolean =
-        !context.firstSession &&
-            context.campaignOrder > 5 &&
-            context.successfulCompletion &&
-            context.completedEligibleLevelsSinceAd >= 3 &&
-            context.secondsSinceAd >= 180 &&
+        context.successfulCompletion &&
+            context.completedLevels > 0 &&
+            context.completedLevels % 5 == 0 &&
             !context.removeAdsEntitled &&
-            context.returningToGarden
+            context.leavingCompletedLevel
 }
 
 enum class AnalyticsEvent {
