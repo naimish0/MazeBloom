@@ -23,19 +23,18 @@ abstract class VerifyReleaseConfigurationTask : DefaultTask() {
     @TaskAction
     fun verifyConfiguration() {
         check(signingConfigured.get()) {
-            "Release signing is not configured. Supply MAZEBLOOM_KEYSTORE_FILE, " +
-                "MAZEBLOOM_KEYSTORE_PASSWORD, MAZEBLOOM_KEY_ALIAS, and MAZEBLOOM_KEY_PASSWORD " +
-                "as Gradle properties or environment variables."
+            "Release signing is not configured. Use Android Studio's Build > Generate Signed Bundle / APK " +
+                "wizard, or inject signing credentials through the release CI environment."
         }
         check(File(keystorePath.get()).isFile) {
-            "MAZEBLOOM_KEYSTORE_FILE does not point to a readable keystore file."
+            "The selected release keystore is not a readable file."
         }
         val policyUrl = configuredPrivacyPolicyUrl.get()
         check(policyUrl.isNotBlank()) {
-            "Set MAZEBLOOM_PRIVACY_POLICY_URL to the verified public policy URL before bundling."
+            "The checked-in privacy policy URL must not be blank."
         }
         check(policyUrl.startsWith("https://")) {
-            "MAZEBLOOM_PRIVACY_POLICY_URL must be a public HTTPS URL."
+            "The checked-in privacy policy URL must use public HTTPS."
         }
         val policy = privacyPolicyFile.get().asFile
         check(policy.isFile && policy.readText().contains("MazeBloom Privacy Policy")) {
@@ -51,9 +50,7 @@ abstract class VerifyProductionAdsConfigurationTask : DefaultTask() {
     @TaskAction
     fun verifyConfiguration() {
         check(adsConfigured.get()) {
-            "Production ads are not configured. Supply non-test MAZEBLOOM_ADMOB_APP_ID, " +
-                "MAZEBLOOM_ADMOB_APP_OPEN_ID, MAZEBLOOM_ADMOB_INTERSTITIAL_ID, and " +
-                "MAZEBLOOM_ADMOB_REWARDED_ID values."
+            "The checked-in production AdMob identifiers are missing, malformed, or still use Google test inventory."
         }
     }
 }
@@ -69,10 +66,10 @@ fun externalValue(name: String): String = providers.gradleProperty(name)
     .orEmpty()
     .trim()
 
-val productionAdMobAppId = externalValue("MAZEBLOOM_ADMOB_APP_ID")
-val productionAppOpenId = externalValue("MAZEBLOOM_ADMOB_APP_OPEN_ID")
-val productionInterstitialId = externalValue("MAZEBLOOM_ADMOB_INTERSTITIAL_ID")
-val productionRewardedId = externalValue("MAZEBLOOM_ADMOB_REWARDED_ID")
+val productionAdMobAppId = "ca-app-pub-7742442202074564~4220443427"
+val productionAppOpenId = "ca-app-pub-7742442202074564/6679085805"
+val productionInterstitialId = "ca-app-pub-7742442202074564/1818580712"
+val productionRewardedId = "ca-app-pub-7742442202074564/5123400902"
 val adMobAppIdPattern = Regex("ca-app-pub-\\d{16}~\\d{10}")
 val adMobUnitIdPattern = Regex("ca-app-pub-\\d{16}/\\d{10}")
 val productionAdsConfigured = adMobAppIdPattern.matches(productionAdMobAppId) &&
@@ -97,8 +94,16 @@ val releaseSigningConfigured = listOf(
     releaseKeyAlias,
     releaseKeyPassword,
 ).all(String::isNotBlank)
-val explicitPrivacyPolicyUrl = externalValue("MAZEBLOOM_PRIVACY_POLICY_URL")
-val privacyPolicyUrl = explicitPrivacyPolicyUrl.ifBlank { "https://naimish0.github.io/MazeBloom/" }
+val injectedKeystorePath = externalValue("android.injected.signing.store.file")
+val injectedSigningConfigured = listOf(
+    injectedKeystorePath,
+    externalValue("android.injected.signing.store.password"),
+    externalValue("android.injected.signing.key.alias"),
+    externalValue("android.injected.signing.key.password"),
+).all(String::isNotBlank)
+val bundleSigningConfigured = releaseSigningConfigured || injectedSigningConfigured
+val bundleKeystorePath = releaseKeystorePath.ifBlank { injectedKeystorePath }
+val privacyPolicyUrl = "https://naimish0.github.io/MazeBloom/"
 val appVersionCode = externalValue("MAZEBLOOM_VERSION_CODE")
     .ifBlank { "1" }
     .toIntOrNull()
@@ -350,10 +355,10 @@ listOf("solve", "analyze", "dedupe", "replay", "render").forEach { command ->
 
 val verifyReleaseConfiguration = tasks.register<VerifyReleaseConfigurationTask>("verifyReleaseConfiguration") {
     group = "verification"
-    description = "Fails closed unless the Play artifact has signing and an in-app privacy policy configured."
-    signingConfigured.set(releaseSigningConfigured)
-    keystorePath.set(rootProject.file(releaseKeystorePath.ifBlank { ".missing-release-keystore" }).absolutePath)
-    configuredPrivacyPolicyUrl.set(explicitPrivacyPolicyUrl)
+    description = "Fails closed unless the Play artifact has dialog/CI signing and a public in-app privacy policy configured."
+    signingConfigured.set(bundleSigningConfigured)
+    keystorePath.set(rootProject.file(bundleKeystorePath.ifBlank { ".missing-release-keystore" }).absolutePath)
+    configuredPrivacyPolicyUrl.set(privacyPolicyUrl)
     privacyPolicyFile.set(rootProject.layout.projectDirectory.file("docs/index.html"))
 }
 

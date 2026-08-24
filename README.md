@@ -14,8 +14,8 @@ Requirements:
 ./gradlew :app:assembleDebug
 ./gradlew :app:testDebugUnitTest :app:lintDebug
 ./gradlew :app:assembleRelease # unsigned local QA, fully R8 optimized
-./gradlew :app:bundleRelease   # signed, privacy-first offline Play bundle
-./gradlew :app:bundleProduction # signed, live-AdMob Play bundle
+./gradlew :app:bundleRelease    # requires Android Studio/CI-injected signing
+./gradlew :app:bundleProduction # requires Android Studio/CI-injected signing; includes live AdMob
 ```
 
 Content commands:
@@ -41,10 +41,10 @@ Campaign levels 1–5 are tutorials with an animated finger cue. After 10 Campai
 
 Settings includes four persistent color themes—Living Garden, Rose Garden, Moonlit Pond, and Golden Meadow. Each theme has coordinated light and dark Material 3 tokens plus board colors, works with System/Light/Dark appearance, and preserves the separate high-contrast option.
 
-Every solved board presents visible flower emojis and confetti, and Share sends a screenshot of that celebration with the Play Store app URL. The app grants 30 Coins once per forward local day, and first completions award 10 Coins. Hint and Undo each cost 30 Coins; Skip Level costs 50 Coins. Each action falls back to a rewarded-ad affordance when the balance is below its cost. An interstitial is due after every fifth first completion and is attempted immediately when that board is solved; a completed rewarded ad suppresses interstitials for the following 60 seconds. App Open ads may appear when the app enters the foreground, with a durable one-hour cooldown between confirmed impressions. Debug binds Google Mobile Ads and UMP with Google's official test app/ad-unit IDs. The optimized `release` build omits both SDKs and all advertising/network permissions. The separate optimized `production` build packages the real adapter only for a signed live-ads release and fails closed unless four valid external, non-test production IDs are configured.
+Every solved board presents visible flower emojis and confetti, and Share sends a screenshot of that celebration with the Play Store app URL. The app grants 30 Coins once per forward local day, and first completions award 10 Coins. Hint and Undo each cost 30 Coins; Skip Level costs 50 Coins. Each action falls back to a rewarded-ad affordance when the balance is below its cost. An interstitial is due after every fifth first completion and is attempted immediately when that board is solved; a completed rewarded ad suppresses interstitials for the following 60 seconds. App Open ads may appear when the app enters the foreground, with a durable one-hour cooldown between confirmed impressions. Debug binds Google Mobile Ads and UMP with Google's official test app/ad-unit IDs. The optimized `release` build omits both SDKs and all advertising/network permissions. The separate optimized `production` build packages the real adapter with the four checked-in public, non-test production identifiers.
 
 ## External configuration
 
-Gameplay remains usable without a network or account. Deterministic fake gateways remain available to automated tests, while the debug-only Developer garden can present non-mutating rewarded/interstitial test inventory on a device. Release builds use R8 full-mode code optimization and optimized resource shrinking, disable debugging/backups/cleartext traffic, and expose the hosted privacy policy from Settings. Play bundle tasks require externally injected upload-key credentials; the live-ads bundle additionally requires approved production IDs. No live ID, password, or signing material is checked in.
+Gameplay remains usable without a network or account. Deterministic fake gateways remain available to automated tests, while the debug-only Developer garden can present non-mutating rewarded/interstitial test inventory on a device. Release builds use R8 full-mode code optimization and optimized resource shrinking, disable debugging/backups/cleartext traffic, and expose the hosted privacy policy from Settings. Use Android Studio’s standard **Build → Generate Signed Bundle / APK** flow for Play bundles; the custom gate recognizes its process-injected credentials. Public AdMob identifiers are checked in, while keystore passwords and signing material are not.
 
 See [PRODUCTION_RELEASE.md](context/PRODUCTION_RELEASE.md) for the release workflow, [PLAY_DATA_SAFETY.md](context/PLAY_DATA_SAFETY.md) for exact build disclosures, [the public app-details page](docs/project.html), [docs/index.html](docs/index.html) for the publishable privacy policy, and [IMPLEMENTATION_REPORT.md](context/IMPLEMENTATION_REPORT.md) for implementation evidence.

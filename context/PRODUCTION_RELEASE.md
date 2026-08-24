@@ -9,29 +9,29 @@ MazeBloom has two optimized non-debug build types:
 
 Both builds target API 36, support API 24+, disable debugging, run R8 full-mode code optimization and optimized resource shrinking, strip app verbose/debug/info logging, preserve retraceable line numbers, block cleartext traffic, and disable app-data backup/device transfer.
 
-## Secure configuration
+## Signing without password files
 
-Supply secrets in protected CI environment variables or `~/.gradle/gradle.properties`. Never put them in this repository.
+For a normal local Play build, use **Build → Generate Signed Bundle / APK** in Android Studio, select **Android App Bundle**, choose module `app` and build variant `production`, then select `/Users/naimishgupta/Documents/KeyStore/MazeBloom.jks` and enter the alias/passwords in the dialog. Leave any password-saving option disabled. The release gate recognizes Android Studio’s process-injected signing credentials; no password property file is required.
 
-```properties
-MAZEBLOOM_KEYSTORE_FILE=/absolute/path/to/mazebloom-upload.jks
-MAZEBLOOM_KEYSTORE_PASSWORD=...
-MAZEBLOOM_KEY_ALIAS=upload
-MAZEBLOOM_KEY_PASSWORD=...
-MAZEBLOOM_VERSION_CODE=1
-MAZEBLOOM_VERSION_NAME=1.0
+For non-interactive CI only, inject secrets as protected environment variables. Never put passwords in this repository or a Gradle properties file:
+
+```bash
+export MAZEBLOOM_KEYSTORE_FILE=/absolute/path/to/mazebloom-upload.jks
+export MAZEBLOOM_KEYSTORE_PASSWORD='...'
+export MAZEBLOOM_KEY_ALIAS='upload'
+export MAZEBLOOM_KEY_PASSWORD='...'
 ```
 
-The optional ad-supported build also requires four real, non-test identifiers:
+The production AdMob identifiers are public configuration and are intentionally checked into `app/build.gradle.kts`:
 
-```properties
-MAZEBLOOM_ADMOB_APP_ID=ca-app-pub-0000000000000000~0000000000
-MAZEBLOOM_ADMOB_APP_OPEN_ID=ca-app-pub-0000000000000000/0000000000
-MAZEBLOOM_ADMOB_INTERSTITIAL_ID=ca-app-pub-0000000000000000/0000000000
-MAZEBLOOM_ADMOB_REWARDED_ID=ca-app-pub-0000000000000000/0000000000
+```text
+App ID:       ca-app-pub-7742442202074564~4220443427
+App Open:     ca-app-pub-7742442202074564/6679085805
+Interstitial: ca-app-pub-7742442202074564/1818580712
+Rewarded:     ca-app-pub-7742442202074564/5123400902
 ```
 
-The project explicitly configures `MAZEBLOOM_PRIVACY_POLICY_URL=https://naimish0.github.io/MazeBloom/`, backed by `docs/index.html`. Verify that public URL immediately before a Play upload; override the property only if the policy moves to another public HTTPS host.
+The checked-in privacy-policy URL is `https://naimish0.github.io/MazeBloom/`, backed by `docs/index.html`. Verify it immediately before a Play upload and update the build constant if the policy moves.
 
 ## Build and verify
 
@@ -42,7 +42,7 @@ Local unsigned artifacts are allowed only for optimization and QA:
 ./gradlew :app:assembleProduction
 ```
 
-Play bundles fail closed when signing is absent. The ad-supported bundle also fails if IDs are missing, malformed, or equal Google's test IDs:
+The Gradle bundle tasks fail closed unless Android Studio or CI injects signing. The production bundle also fails if its checked-in IDs are missing, malformed, or equal Google’s test IDs:
 
 ```bash
 ./gradlew :app:bundleRelease
@@ -74,4 +74,4 @@ Before promotion beyond internal testing:
 - Test the Play-generated split APK on at least one supported phone and one supported tablet, including offline play, process restoration, the celebration screenshot and Play Store share URL, accessibility, and—if applicable—live consent, rewarded action fallbacks, the immediate every-fifth-completion interstitial, its 60-second post-reward protection, and the persisted one-hour App Open cooldown.
 - Upload `mapping.txt` and retain Play vitals/crash/ANR monitoring ownership for every release.
 
-Production ad IDs, the upload key, AdMob privacy-message configuration, Play Console declarations, store assets, trademark clearance, and closed-testing approval are operator-owned external state and are intentionally not committed.
+The upload key/passwords, AdMob privacy-message configuration, Play Console declarations, store assets, trademark clearance, and closed-testing approval remain operator-owned external state. Only the public AdMob identifiers are committed.
