@@ -47,6 +47,7 @@ class GoogleMobileAdsGateway(
     override val enabled = appOpenAdUnitId.isNotBlank() && interstitialAdUnitId.isNotBlank() && rewardedAdUnitId.isNotBlank()
     private val consentInformation = UserMessagingPlatform.getConsentInformation(activity)
     private val cooldownPreferences = activity.getSharedPreferences(APP_OPEN_PREFERENCES, Context.MODE_PRIVATE)
+    private val appOpenEligibleForProcess = registerProcessLaunch(cooldownPreferences)
     override val privacyOptionsRequired: Boolean
         get() = consentInformation.privacyOptionsRequirementStatus ==
             ConsentInformation.PrivacyOptionsRequirementStatus.REQUIRED
@@ -78,17 +79,15 @@ class GoogleMobileAdsGateway(
     }
 
     override suspend fun showAppOpen(): AdResult {
-        if (!isAppOpenCooldownElapsed()) return AdResult.UNAVAILABLE
+        if (!appOpenEligibleForProcess || !isAppOpenCooldownElapsed()) return AdResult.UNAVAILABLE
         return presentExclusively {
             if (!isAppOpenCooldownElapsed() || wasFullScreenAdJustDismissed()) {
                 return@presentExclusively AdResult.UNAVAILABLE
             }
-            val ad = withTimeoutOrNull(APP_OPEN_FOREGROUND_TIMEOUT_MS) {
-                if (!awaitReady()) null else ensureAppOpenLoaded()
-            } ?: return@presentExclusively AdResult.UNAVAILABLE
+            // Foreground requests consume only inventory that was already loaded. Waiting here can
+            // place an App Open ad over content the player has begun using.
+            val ad = takeFreshCachedAppOpen() ?: return@presentExclusively AdResult.UNAVAILABLE
             if (!canPresentNow()) return@presentExclusively AdResult.UNAVAILABLE
-            appOpenAd = null
-            appOpenLoadedAtElapsedMs = 0L
             presentAppOpen(ad).also { scope.launch { ensureAppOpenLoaded() } }
         }
     }
@@ -224,6 +223,18 @@ class GoogleMobileAdsGateway(
                 appOpenLoadedAtElapsedMs = SystemClock.elapsedRealtime()
             }
         }
+    }
+
+    private suspend fun takeFreshCachedAppOpen(): AppOpenAd? = appOpenLoadMutex.withLock {
+        val now = SystemClock.elapsedRealtime()
+        val cached = appOpenAd?.takeIf {
+            val age = now - appOpenLoadedAtElapsedMs
+            age in 0 until APP_OPEN_MAX_CACHE_AGE_MS
+        }
+        appOpenAd = null
+        appOpenLoadedAtElapsedMs = 0L
+        if (cached == null) scope.launch { ensureAppOpenLoaded() }
+        cached
     }
 
     private suspend fun ensureInterstitialLoaded(): InterstitialAd? = interstitialLoadMutex.withLock {
@@ -395,11 +406,25 @@ class GoogleMobileAdsGateway(
         private const val TAG = "MazeBloomAds"
         private const val INITIALIZATION_TIMEOUT_MS = 35_000L
         private const val AD_LOAD_TIMEOUT_MS = 20_000L
-        private const val APP_OPEN_FOREGROUND_TIMEOUT_MS = 5_000L
         private const val APP_OPEN_MAX_CACHE_AGE_MS = 4L * 60L * 60L * 1_000L
         private const val FULL_SCREEN_DISMISS_GUARD_MS = 10_000L
         private const val APP_OPEN_PREFERENCES = "mazebloom_app_open_ads"
         private const val APP_OPEN_LAST_SHOWN_AT = "last_shown_at_ms"
+        private const val APP_OPEN_RECORDED_LAUNCHES = "recorded_launches"
         private const val LAST_REWARDED_COMPLETED_AT = "last_rewarded_completed_at_ms"
+        private val processLaunchLock = Any()
+
+        @Volatile
+        private var processLaunchEligibility: Boolean? = null
+
+        private fun registerProcessLaunch(preferences: android.content.SharedPreferences): Boolean =
+            synchronized(processLaunchLock) {
+                processLaunchEligibility ?: run {
+                    val previous = preferences.getInt(APP_OPEN_RECORDED_LAUNCHES, 0).coerceAtLeast(0)
+                    val current = if (previous == Int.MAX_VALUE) previous else previous + 1
+                    preferences.edit().putInt(APP_OPEN_RECORDED_LAUNCHES, current).apply()
+                    AppOpenAdPolicy.isLaunchEligible(current).also { processLaunchEligibility = it }
+                }
+            }
     }
 }

@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var ads: AdsGateway
     private lateinit var analytics: Analytics
     private var appOpenRequestInFlight = false
+    private var initialResumeCompleted = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,6 +69,12 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // A cold start has no previously cached ad and must never be interrupted after content
+        // becomes interactive. App Open inventory is considered only on a later warm foreground.
+        if (!initialResumeCompleted) {
+            initialResumeCompleted = true
+            return
+        }
         if (!::ads.isInitialized || appOpenRequestInFlight) return
         appOpenRequestInFlight = true
         lifecycleScope.launch {

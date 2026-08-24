@@ -43,6 +43,14 @@ class GatewayPolicyTest {
         assertTrue(AppOpenAdPolicy.isCooldownElapsed(0L, shownAt))
     }
 
+    @Test fun firstThreeLaunchesRemainAppOpenAdFree() {
+        assertEquals(3, AppOpenAdPolicy.REQUIRED_AD_FREE_LAUNCHES)
+        assertFalse(AppOpenAdPolicy.isLaunchEligible(0))
+        assertFalse(AppOpenAdPolicy.isLaunchEligible(1))
+        assertFalse(AppOpenAdPolicy.isLaunchEligible(3))
+        assertTrue(AppOpenAdPolicy.isLaunchEligible(4))
+    }
+
     @Test fun rewardedCompletionProtectsInterstitialsForSixtySeconds() {
         val rewardedAt = 10_000L
         assertTrue(RewardedToInterstitialPolicy.isProtected(rewardedAt, rewardedAt))

@@ -66,6 +66,11 @@ fun externalValue(name: String): String = providers.gradleProperty(name)
     .orEmpty()
     .trim()
 
+fun protectedEnvironmentValue(name: String): String = providers.environmentVariable(name)
+    .orNull
+    .orEmpty()
+    .trim()
+
 val productionAdMobAppId = "ca-app-pub-7742442202074564~4220443427"
 val productionAppOpenId = "ca-app-pub-7742442202074564/6679085805"
 val productionInterstitialId = "ca-app-pub-7742442202074564/1818580712"
@@ -84,10 +89,10 @@ val configuredAdMobAppId = productionAdMobAppId.takeIf { productionAdsConfigured
 val configuredAppOpenId = productionAppOpenId.takeIf { productionAdsConfigured }.orEmpty()
 val configuredInterstitialId = productionInterstitialId.takeIf { productionAdsConfigured }.orEmpty()
 val configuredRewardedId = productionRewardedId.takeIf { productionAdsConfigured }.orEmpty()
-val releaseKeystorePath = externalValue("MAZEBLOOM_KEYSTORE_FILE")
-val releaseStorePassword = externalValue("MAZEBLOOM_KEYSTORE_PASSWORD")
-val releaseKeyAlias = externalValue("MAZEBLOOM_KEY_ALIAS")
-val releaseKeyPassword = externalValue("MAZEBLOOM_KEY_PASSWORD")
+val releaseKeystorePath = protectedEnvironmentValue("MAZEBLOOM_KEYSTORE_FILE")
+val releaseStorePassword = protectedEnvironmentValue("MAZEBLOOM_KEYSTORE_PASSWORD")
+val releaseKeyAlias = protectedEnvironmentValue("MAZEBLOOM_KEY_ALIAS")
+val releaseKeyPassword = protectedEnvironmentValue("MAZEBLOOM_KEY_PASSWORD")
 val releaseSigningConfigured = listOf(
     releaseKeystorePath,
     releaseStorePassword,
@@ -368,7 +373,13 @@ val verifyProductionAdsConfiguration = tasks.register<VerifyProductionAdsConfigu
     adsConfigured.set(productionAdsConfigured)
 }
 
-tasks.named("check") { dependsOn("verifyBundledContentFast", "verifyEndlessBaseline") }
+tasks.named("check") {
+    dependsOn(
+        "verifyBundledContentFast",
+        "verifyEndlessBaseline",
+        verifyProductionAdsConfiguration,
+    )
+}
 tasks.matching { it.name == "assembleDebug" }.configureEach { dependsOn("verifyBundledContentFast", "verifyEndlessBaseline") }
 tasks.matching { it.name == "bundleRelease" || it.name == "bundleProduction" }.configureEach {
     dependsOn("verifyBundledContent", "verifyEndlessBaseline", "verifyEndlessHorizonStamp")
