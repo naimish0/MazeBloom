@@ -90,6 +90,85 @@ class ProgressRepositoryTest {
         }
     }
 
+    @Test fun companionsUnlockAtTenAndPurchasesArePermanentAndAtomic() = runBlocking {
+        val repository = InMemoryProgressRepository()
+        val mouse = CompanionCatalog.all.first()
+        val bunny = CompanionCatalog.all[1]
+        val fox = CompanionCatalog.all[2]
+
+        assertEquals(setOf(mouse.id), repository.companionCollection().ownedIds)
+        assertEquals(CompanionPurchaseResult.FEATURE_LOCKED, repository.purchaseCompanion(bunny.id))
+        assertFalse(repository.selectCompanion(mouse.id))
+
+        (1..10).forEach { repository.complete(level(it), 4, emptyList()) }
+        assertEquals(100, repository.coinBalance())
+        assertTrue(repository.selectCompanion(mouse.id))
+
+        assertEquals(CompanionPurchaseResult.PURCHASED, repository.purchaseCompanion(bunny.id))
+        assertEquals(0, repository.coinBalance())
+        assertEquals(bunny.id, repository.companionCollection().selectedId)
+        assertTrue(bunny.id in repository.companionCollection().ownedIds)
+
+        assertEquals(CompanionPurchaseResult.ALREADY_OWNED, repository.purchaseCompanion(bunny.id))
+        assertEquals(0, repository.coinBalance())
+        assertEquals(CompanionPurchaseResult.INSUFFICIENT_COINS, repository.purchaseCompanion(fox.id))
+        assertEquals(setOf(mouse.id, bunny.id), repository.companionCollection().ownedIds)
+    }
+
+    @Test fun companionCatalogHasDistinctHighQualityRosterAndMonotonicPrices() {
+        assertEquals(100, CompanionCatalog.all.size)
+        assertEquals(100, CompanionCatalog.all.map { it.id }.toSet().size)
+        assertEquals(100, CompanionCatalog.all.map { it.displayName }.toSet().size)
+        assertEquals(22, CompanionCatalog.all.count { it.family == CompanionFamily.MAMMAL })
+        assertEquals(22, CompanionCatalog.all.count { it.family == CompanionFamily.BIRD })
+        assertEquals(22, CompanionCatalog.all.count { it.family == CompanionFamily.INSECT })
+        assertEquals(17, CompanionCatalog.all.count { it.family == CompanionFamily.GARDEN })
+        assertEquals(17, CompanionCatalog.all.count { it.family == CompanionFamily.WATER })
+        assertEquals(0, CompanionCatalog.all.first().price)
+        assertEquals((100..5_000 step 50).toList(), CompanionCatalog.all.drop(1).map { it.price })
+        assertEquals(3_000, CompanionCatalog.all[59].price)
+        assertEquals(3_050, CompanionCatalog.all[60].price)
+    }
+
+    @Test fun rewardedAdsCreditOnlyTheirChosenCompanionAndCanCoverTheFullUnlock() = runBlocking {
+        val repository = InMemoryProgressRepository()
+        val bunny = CompanionCatalog.all[1]
+        val fox = CompanionCatalog.all[2]
+        (1..10).forEach { repository.complete(level(it), 4, emptyList()) }
+
+        val first = repository.rewardCompanionWithAd(bunny.id, "bunny-reward-1")
+        assertEquals(CompanionAdRewardResult.PROGRESS, first.result)
+        assertEquals(50, first.creditedCoins)
+        assertEquals(50, first.remainingCoins)
+        assertEquals(100, repository.coinBalance())
+        assertEquals(50, repository.companionCollection().adCredit(bunny.id))
+        assertEquals(0, repository.companionCollection().adCredit(fox.id))
+
+        val duplicate = repository.rewardCompanionWithAd(bunny.id, "bunny-reward-1")
+        assertEquals(CompanionAdRewardResult.DUPLICATE_REWARD, duplicate.result)
+        assertEquals(50, duplicate.creditedCoins)
+
+        val unlocked = repository.rewardCompanionWithAd(bunny.id, "bunny-reward-2")
+        assertEquals(CompanionAdRewardResult.UNLOCKED, unlocked.result)
+        assertEquals(0, unlocked.remainingCoins)
+        assertEquals(100, repository.coinBalance())
+        assertEquals(bunny.id, repository.companionCollection().selectedId)
+        assertTrue(bunny.id in repository.companionCollection().ownedIds)
+    }
+
+    @Test fun partialCompanionAdCreditReducesOnlyThatCompanionsCoinPrice() = runBlocking {
+        val repository = InMemoryProgressRepository()
+        val bunny = CompanionCatalog.all[1]
+        val fox = CompanionCatalog.all[2]
+        (1..10).forEach { repository.complete(level(it), 4, emptyList()) }
+
+        repository.rewardCompanionWithAd(bunny.id, "partial-bunny-reward")
+        assertEquals(CompanionPurchaseResult.PURCHASED, repository.purchaseCompanion(bunny.id))
+        assertEquals(50, repository.coinBalance())
+        assertEquals(CompanionPurchaseResult.INSUFFICIENT_COINS, repository.purchaseCompanion(fox.id))
+        assertEquals(50, repository.coinBalance())
+    }
+
     @Test fun rewardedTransactionsAreIdempotentAndSkipOnlyAdvancesUnlock() = runBlocking {
         val repository = InMemoryProgressRepository()
         assertTrue(repository.claimAdAction("reward-1", "hint"))
@@ -176,7 +255,15 @@ class ProgressRepositoryTest {
         val repository = InMemoryProgressRepository()
         val first = level(1)
         repository.complete(first, 3, listOf(Direction.RIGHT, Direction.DOWN))
-        val settings = PlayerSettings(sound = false, haptics = false, reducedMotion = true, highContrast = true, directionButtons = true)
+        val settings = PlayerSettings(
+            sound = false,
+            haptics = false,
+            reducedMotion = true,
+            highContrast = true,
+            directionButtons = true,
+            themeMode = ThemeMode.DARK,
+            themePalette = ThemePalette.MOONLIT_POND,
+        )
         repository.updateSettings(settings)
         val dailyPool = listOf(level().copy(id = "daily-0001", campaignOrder = 0, chapter = 0, gardenId = "daily", chapterId = "daily", chapterOrderWithinGarden = 0))
         val date = LocalDateSource { ObservedDate("2026-08-22", 20_687) }

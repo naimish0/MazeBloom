@@ -56,7 +56,11 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
             }
-            MazeBloomTheme(darkTheme = dark, highContrast = state.settings.highContrast) {
+            MazeBloomTheme(
+                palette = state.settings.themePalette,
+                darkTheme = dark,
+                highContrast = state.settings.highContrast,
+            ) {
                 MazeBloomApp(model = model, state = state)
             }
         }

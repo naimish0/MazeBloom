@@ -7,6 +7,11 @@ package com.rameshta.mazebloom.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -15,6 +20,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -101,10 +107,15 @@ import com.rameshta.mazebloom.core.GameState
 import com.rameshta.mazebloom.core.GameStatus
 import com.rameshta.mazebloom.core.LevelDefinition
 import com.rameshta.mazebloom.data.PlayerSettings
+import com.rameshta.mazebloom.data.ThemePalette
 import com.rameshta.mazebloom.data.ThemeMode
+import com.rameshta.mazebloom.data.CompanionCatalog
+import com.rameshta.mazebloom.data.CompanionDefinition
+import com.rameshta.mazebloom.data.CompanionFamily
 import com.rameshta.mazebloom.core.EndlessGenerationState
 import com.rameshta.mazebloom.ui.theme.LocalBloomRoleColors
 import com.rameshta.mazebloom.ui.theme.MazeBloomTheme
+import com.rameshta.mazebloom.ui.theme.themePaletteSwatch
 import kotlin.math.abs
 import kotlinx.coroutines.delay
 
@@ -130,6 +141,7 @@ fun MazeBloomApp(model: MazeBloomViewModel, state: MazeBloomUiState) {
             is AppScreen.Chapter -> ChapterScreen(state, model, state.screen.chapterId)
             AppScreen.Daily -> DailyScreen(state, model)
             AppScreen.Collection -> CollectionScreen(state, model)
+            AppScreen.Companions -> CompanionsScreen(state, model)
             AppScreen.Settings -> SettingsScreen(state, model)
             AppScreen.Endless -> EndlessGardenScreen(state, model)
             AppScreen.Developer -> DeveloperScreen(state, model)
@@ -240,6 +252,23 @@ private fun HomeScreen(state: MazeBloomUiState, model: MazeBloomViewModel) {
                 symbol = "∞",
                 accent = MaterialTheme.colorScheme.tertiary,
                 onClick = model::openAutoProgressive,
+            )
+            HomeCard(
+                R.string.companions,
+                if (state.completedCount >= CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS) {
+                    R.string.companions_description
+                } else {
+                    R.string.companions_locked_description
+                },
+                enabled = state.completedCount >= CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS,
+                trailing = if (state.completedCount >= CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS) {
+                    CompanionCatalog.find(state.companionCollection.selectedId)?.displayName.orEmpty()
+                } else {
+                    "${state.completedCount.coerceAtMost(CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS)}/${CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS}"
+                },
+                symbol = "◉",
+                accent = MaterialTheme.colorScheme.secondary,
+                onClick = model::openCompanions,
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 HomeUtilityCard(
@@ -610,7 +639,7 @@ private fun GameScreen(state: MazeBloomUiState, model: MazeBloomViewModel) {
             val wide = maxWidth > 700.dp
             if (wide) {
                 Row(Modifier.fillMaxSize().padding(20.dp), horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
-                    TutorialBoard(level, game, state.lastTransition, state.settings, state.hintDirection, model::move, Modifier.weight(1f))
+                    TutorialBoard(level, game, state.lastTransition, state.settings, state.hintDirection, activeCompanion(state), model::move, Modifier.weight(1f))
                     Column(Modifier.weight(.8f), horizontalAlignment = Alignment.CenterHorizontally) {
                         GameStats(level, game, state.coinBalance)
                         TutorialCue(level, game)
@@ -621,14 +650,14 @@ private fun GameScreen(state: MazeBloomUiState, model: MazeBloomViewModel) {
                 Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).navigationBarsPadding(), horizontalAlignment = Alignment.CenterHorizontally) {
                     GameStats(level, game, state.coinBalance)
                     TutorialCue(level, game)
-                    TutorialBoard(level, game, state.lastTransition, state.settings, state.hintDirection, model::move, Modifier.fillMaxWidth())
+                    TutorialBoard(level, game, state.lastTransition, state.settings, state.hintDirection, activeCompanion(state), model::move, Modifier.fillMaxWidth())
                     Spacer(Modifier.weight(1f))
                     GameControls(state, model, progress?.stars, Modifier.fillMaxWidth())
                 }
             }
         }
         if (game.status == GameStatus.SOLVED) {
-            CompletionCard(level, game, if (state.isDaily) starCount(level, game.moveCount) else model.levelProgress(level.id)?.stars ?: starCount(level, game.moveCount), state.settings.reducedMotion, state.isDaily, state.isProgressive, state.endlessOrdinal, state.completionRewardCoins, state.gameBackDestination, model, onShare = {
+            CompletionCard(level, game, if (state.isDaily) starCount(level, game.moveCount) else model.levelProgress(level.id)?.stars ?: starCount(level, game.moveCount), state.settings.reducedMotion, state.isDaily, state.isProgressive, state.endlessOrdinal, state.completionRewardCoins, state.gameBackDestination, activeCompanion(state), model, onShare = {
                 ShareCard.shareCelebration(context, shareView)
             })
         }
@@ -669,6 +698,7 @@ private fun TutorialBoard(
     transition: com.rameshta.mazebloom.core.TransitionResult?,
     settings: PlayerSettings,
     hint: Direction?,
+    companion: CompanionDefinition?,
     onDirection: (Direction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -679,7 +709,7 @@ private fun TutorialBoard(
             .padding(10.dp),
         contentAlignment = Alignment.Center,
     ) {
-        Board(level, state, transition, settings, hint, onDirection, Modifier.fillMaxSize())
+        Board(level, state, transition, settings, hint, companion, onDirection, Modifier.fillMaxSize())
         if (level.campaignOrder in 1..5 && state.moveCount == 0 && state.status == GameStatus.ACTIVE) {
             FingerSwipeTutorial(level.canonicalReplay.firstOrNull() ?: Direction.RIGHT, settings.reducedMotion)
         }
@@ -745,9 +775,17 @@ private fun Board(
     transition: com.rameshta.mazebloom.core.TransitionResult?,
     settings: PlayerSettings,
     hint: Direction?,
+    companion: CompanionDefinition?,
     onDirection: (Direction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val companionMotion = rememberInfiniteTransition(label = "board-companion-motion")
+    val companionPhase by companionMotion.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(1_200, easing = LinearEasing), RepeatMode.Restart),
+        label = "board-companion-phase",
+    )
     val animation = remember(level.id) { Animatable(1f) }
     LaunchedEffect(transition) {
         if (transition?.isValid == true && transition.afterState == state) {
@@ -779,7 +817,8 @@ private fun Board(
         val toY = (to / level.width).toFloat()
         Offset(fromX + (toX - fromX) * fraction, fromY + (toY - fromY) * fraction)
     } ?: Offset((state.seedCell % level.width).toFloat(), (state.seedCell / level.width).toFloat())
-    val boardDescription = stringResource(R.string.board_description, state.seedCell % level.width + 1, state.seedCell / level.width + 1, state.remainingBuds.count(), state.moveCount)
+    val moverName = companion?.displayName ?: stringResource(R.string.seed_spirit)
+    val boardDescription = stringResource(R.string.board_description, state.seedCell % level.width + 1, state.seedCell / level.width + 1, state.remainingBuds.count(), state.moveCount, moverName)
     val roles = LocalBloomRoleColors.current
     val floor = roles.boardPaper
     val stone = roles.stone
@@ -864,17 +903,38 @@ private fun Board(
             }
             val seedX = seedPosition.x * cellSize
             val seedY = seedPosition.y * cellSize
-            drawCircle(Color.Black.copy(alpha = .2f), cellSize * .27f, Offset(seedX + cellSize * .52f, seedY + cellSize * .58f))
-            drawCircle(seedRing, cellSize * .27f, Offset(seedX + cellSize / 2, seedY + cellSize / 2))
-            drawCircle(seed, cellSize * .22f, Offset(seedX + cellSize / 2, seedY + cellSize / 2))
-            drawCircle(Color.White.copy(alpha = .38f), cellSize * .055f, Offset(seedX + cellSize * .43f, seedY + cellSize * .42f))
-            seedLeaf.reset()
-            seedLeaf.apply {
-            moveTo(seedX + cellSize * .5f, seedY + cellSize * .29f)
-            quadraticTo(seedX + cellSize * .72f, seedY + cellSize * .12f, seedX + cellSize * .73f, seedY + cellSize * .39f)
-            quadraticTo(seedX + cellSize * .61f, seedY + cellSize * .43f, seedX + cellSize * .5f, seedY + cellSize * .29f)
+            if (companion == null) {
+                drawCircle(Color.Black.copy(alpha = .2f), cellSize * .27f, Offset(seedX + cellSize * .52f, seedY + cellSize * .58f))
+                drawCircle(seedRing, cellSize * .27f, Offset(seedX + cellSize / 2, seedY + cellSize / 2))
+                drawCircle(seed, cellSize * .22f, Offset(seedX + cellSize / 2, seedY + cellSize / 2))
+                drawCircle(Color.White.copy(alpha = .38f), cellSize * .055f, Offset(seedX + cellSize * .43f, seedY + cellSize * .42f))
+                seedLeaf.reset()
+                seedLeaf.apply {
+                    moveTo(seedX + cellSize * .5f, seedY + cellSize * .29f)
+                    quadraticTo(seedX + cellSize * .72f, seedY + cellSize * .12f, seedX + cellSize * .73f, seedY + cellSize * .39f)
+                    quadraticTo(seedX + cellSize * .61f, seedY + cellSize * .43f, seedX + cellSize * .5f, seedY + cellSize * .29f)
+                }
+                drawPath(seedLeaf, Color(0xFF96B95F))
+            } else {
+                val direction = activeTransition?.let { result ->
+                    val to = result.traversedPath.firstOrNull() ?: result.afterState.seedCell
+                    val from = result.beforeState.seedCell
+                    when {
+                        to % level.width > from % level.width -> Direction.RIGHT
+                        to % level.width < from % level.width -> Direction.LEFT
+                        to / level.width > from / level.width -> Direction.DOWN
+                        else -> Direction.UP
+                    }
+                }
+                drawCompanionCharacter(
+                    companion = companion,
+                    center = Offset(seedX + cellSize / 2, seedY + cellSize / 2),
+                    diameter = cellSize * .82f,
+                    phase = if (settings.reducedMotion) .5f else companionPhase,
+                    traveling = activeTransition != null,
+                    direction = direction,
+                )
             }
-            drawPath(seedLeaf, Color(0xFF96B95F))
             hint?.let { direction ->
                 val end = Offset(seedX + cellSize / 2 + direction.dx * cellSize * .35f, seedY + cellSize / 2 + direction.dy * cellSize * .35f)
                 drawLine(Color(0xFFFFB23F), Offset(seedX + cellSize / 2, seedY + cellSize / 2), end, cellSize * .08f)
@@ -1020,6 +1080,7 @@ private fun CompletionCard(
     endlessOrdinal: Long,
     rewardCoins: Int,
     backDestination: AppScreen,
+    companion: CompanionDefinition?,
     model: MazeBloomViewModel,
     onShare: () -> Unit,
 ) {
@@ -1053,7 +1114,16 @@ private fun CompletionCard(
                             modifier = Modifier.clearAndSetSemantics { },
                         ) {
                             Text("🌸", fontSize = 30.sp)
-                            BloomMark(Modifier.size(72.dp))
+                            if (companion == null) {
+                                BloomMark(Modifier.size(72.dp))
+                            } else {
+                                CompanionAvatar(
+                                    companion = companion,
+                                    modifier = Modifier.size(78.dp),
+                                    reducedMotion = reducedMotion,
+                                    animate = true,
+                                )
+                            }
                             Text("🌼", fontSize = 30.sp)
                         }
                         BloomPill(stringResource(R.string.completion_badge), color = MaterialTheme.colorScheme.primary)
@@ -1075,6 +1145,12 @@ private fun CompletionCard(
                             stringResource(R.string.completion_reward, rewardCoins),
                             color = MaterialTheme.colorScheme.secondary,
                         )
+                        if (level.campaignOrder == CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS && rewardCoins > 0) {
+                            BloomPill(
+                                stringResource(R.string.companions_unlocked),
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedButton(onClick = model::replaySolution, modifier = Modifier.weight(1f), shape = BloomSmallShape) { Text(stringResource(R.string.replay)) }
                             OutlinedButton(onClick = model::restart, modifier = Modifier.weight(1f), shape = BloomSmallShape) { Text(stringResource(R.string.retry)) }
@@ -1172,6 +1248,10 @@ private val CelebrationColors = listOf(
 
 private val CelebrationEmojis = listOf("🌸", "🌼", "🌿", "✨", "🌺", "🌷", "🍃")
 
+private fun activeCompanion(state: MazeBloomUiState): CompanionDefinition? =
+    CompanionCatalog.find(state.companionCollection.selectedId)
+        ?.takeIf { state.completedCount >= CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS }
+
 private fun starCount(level: LevelDefinition, moves: Int) = when { moves <= level.certifiedOptimalMoves -> 3; moves <= level.certifiedOptimalMoves + 2 -> 2; else -> 1 }
 
 @Composable
@@ -1195,6 +1275,267 @@ private fun difficultyLabels(): Map<DifficultyBand, String> = mapOf(
     DifficultyBand.EXPERT to stringResource(R.string.difficulty_expert),
     DifficultyBand.MASTER to stringResource(R.string.difficulty_master),
 )
+
+@Composable
+private fun CompanionsScreen(state: MazeBloomUiState, model: MazeBloomViewModel) {
+    var selectedFamily by rememberSaveable { mutableStateOf<CompanionFamily?>(null) }
+    val collection = state.companionCollection
+    val ownedIds = collection.ownedIds
+    val selectedCompanion = CompanionCatalog.find(collection.selectedId) ?: CompanionCatalog.all.first()
+    val actionCompanion = CompanionCatalog.find(state.companionActionTargetId.orEmpty()) ?: selectedCompanion
+    val visibleCompanions = CompanionCatalog.all.filter { selectedFamily == null || it.family == selectedFamily }
+    val familyFilters = listOf<CompanionFamily?>(null) + CompanionFamily.entries
+
+    ScreenScaffold(R.string.companions, { model.navigate(AppScreen.Home) }) { padding ->
+        LazyVerticalGrid(
+            columns = GridCells.Adaptive(156.dp),
+            contentPadding = PaddingValues(
+                start = 16.dp,
+                end = 16.dp,
+                top = padding.calculateTopPadding() + 8.dp,
+                bottom = 28.dp,
+            ),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                BloomPanel(Modifier.fillMaxWidth(), accent = MaterialTheme.colorScheme.secondary) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(20.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    ) {
+                        CompanionAvatar(
+                            companion = selectedCompanion,
+                            modifier = Modifier.size(104.dp),
+                            reducedMotion = state.settings.reducedMotion,
+                            animate = true,
+                        )
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            BloomPill(
+                                stringResource(R.string.companion_roster_summary, CompanionCatalog.all.size, ownedIds.size),
+                                color = MaterialTheme.colorScheme.secondary,
+                            )
+                            Text(stringResource(R.string.companions_heading), style = MaterialTheme.typography.headlineSmall)
+                            Text(
+                                selectedCompanion.displayName,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                    }
+                }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Text(
+                    stringResource(R.string.companions_intro),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 4.dp),
+                )
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    familyFilters.forEach { family ->
+                        FilterChip(
+                            selected = selectedFamily == family,
+                            onClick = { selectedFamily = family },
+                            label = { Text(companionFamilyName(family)) },
+                        )
+                    }
+                }
+            }
+            if (state.companionActionStatus != CompanionActionStatus.IDLE) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    val isError = state.companionActionStatus in setOf(
+                        CompanionActionStatus.INSUFFICIENT_COINS,
+                        CompanionActionStatus.FEATURE_LOCKED,
+                        CompanionActionStatus.AD_UNAVAILABLE,
+                    )
+                    Card(
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isError) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer,
+                        ),
+                    ) {
+                        Text(
+                            companionStatusMessage(state, actionCompanion.displayName),
+                            modifier = Modifier.fillMaxWidth().padding(14.dp),
+                            color = if (isError) MaterialTheme.colorScheme.onErrorContainer else MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
+            }
+            gridItems(visibleCompanions, key = { it.id }) { companion ->
+                CompanionCard(
+                    companion = companion,
+                    selected = companion.id == collection.selectedId,
+                    owned = companion.id in ownedIds,
+                    adCredit = collection.adCredit(companion.id),
+                    adServicesEnabled = state.adServicesEnabled,
+                    adLoading = state.companionActionInFlight &&
+                        state.companionActionTargetId == companion.id &&
+                        state.companionActionStatus == CompanionActionStatus.AD_LOADING,
+                    reducedMotion = state.settings.reducedMotion,
+                    actionEnabled = !state.companionActionInFlight,
+                    onChoose = { model.chooseCompanion(companion.id) },
+                    onWatchAd = { model.watchAdForCompanion(companion.id) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CompanionCard(
+    companion: CompanionDefinition,
+    selected: Boolean,
+    owned: Boolean,
+    adCredit: Int,
+    adServicesEnabled: Boolean,
+    adLoading: Boolean,
+    reducedMotion: Boolean,
+    actionEnabled: Boolean,
+    onChoose: () -> Unit,
+    onWatchAd: () -> Unit,
+) {
+    val selectedSuffix = if (selected) stringResource(R.string.companion_selected_suffix) else ""
+    val remainingPrice = (companion.price - adCredit).coerceAtLeast(0)
+    val description = if (owned) {
+        stringResource(R.string.companion_owned_description, companion.displayName, selectedSuffix)
+    } else {
+        pluralStringResource(
+            R.plurals.companion_locked_ad_description,
+            remainingPrice,
+            companion.displayName,
+            remainingPrice,
+            CompanionCatalog.REWARDED_AD_CREDIT,
+        )
+    }
+    Card(
+        modifier = Modifier.fillMaxWidth().semantics { contentDescription = description },
+        shape = BloomCardShape,
+        colors = CardDefaults.cardColors(
+            containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+        ),
+    ) {
+        Column(
+            Modifier.fillMaxWidth().padding(14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            CompanionAvatar(
+                companion = companion,
+                modifier = Modifier.size(94.dp),
+                reducedMotion = reducedMotion,
+                animate = true,
+            )
+            Text(
+                companion.displayName,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                minLines = 2,
+            )
+            Text(
+                companionFamilyName(companion.family),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (!owned && adCredit > 0) {
+                Text(
+                    stringResource(R.string.companion_ad_credit_progress, adCredit, companion.price),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                    textAlign = TextAlign.Center,
+                )
+            }
+            when {
+                selected -> Button(
+                    onClick = {},
+                    enabled = false,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    shape = BloomSmallShape,
+                ) { Text(stringResource(R.string.companion_selected)) }
+                owned -> OutlinedButton(
+                    onClick = onChoose,
+                    enabled = actionEnabled,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    shape = BloomSmallShape,
+                ) { Text(stringResource(R.string.companion_select)) }
+                else -> Button(
+                    onClick = onChoose,
+                    enabled = actionEnabled,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                    shape = BloomSmallShape,
+                ) {
+                    Text(
+                        stringResource(R.string.companion_unlock_price, remainingPrice),
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+            if (!owned) {
+                OutlinedButton(
+                    onClick = onWatchAd,
+                    enabled = actionEnabled && adServicesEnabled,
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                    shape = BloomSmallShape,
+                ) {
+                    Text(
+                        when {
+                            adLoading -> stringResource(R.string.ad_loading)
+                            adServicesEnabled -> stringResource(
+                                R.string.companion_watch_ad,
+                                CompanionCatalog.REWARDED_AD_CREDIT,
+                            )
+                            else -> stringResource(R.string.companion_ads_unavailable)
+                        },
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun companionFamilyName(family: CompanionFamily?): String = stringResource(
+    when (family) {
+        null -> R.string.companion_family_all
+        CompanionFamily.MAMMAL -> R.string.companion_family_mammals
+        CompanionFamily.BIRD -> R.string.companion_family_birds
+        CompanionFamily.INSECT -> R.string.companion_family_insects
+        CompanionFamily.GARDEN -> R.string.companion_family_garden
+        CompanionFamily.WATER -> R.string.companion_family_water
+    },
+)
+
+@Composable
+private fun companionStatusMessage(state: MazeBloomUiState, selectedName: String): String = when (state.companionActionStatus) {
+    CompanionActionStatus.PURCHASED -> stringResource(R.string.companion_purchase_success, selectedName)
+    CompanionActionStatus.SELECTED -> stringResource(R.string.companion_selection_success, selectedName)
+    CompanionActionStatus.INSUFFICIENT_COINS -> stringResource(R.string.companion_insufficient_coins)
+    CompanionActionStatus.FEATURE_LOCKED -> stringResource(R.string.companion_feature_locked)
+    CompanionActionStatus.AD_LOADING -> stringResource(R.string.companion_ad_loading, selectedName)
+    CompanionActionStatus.AD_PROGRESS -> pluralStringResource(
+        R.plurals.companion_ad_progress_success,
+        state.companionAdRemainingCoins,
+        CompanionCatalog.REWARDED_AD_CREDIT,
+        selectedName,
+        state.companionAdRemainingCoins,
+    )
+    CompanionActionStatus.AD_UNLOCKED -> stringResource(R.string.companion_ad_unlock_success, selectedName)
+    CompanionActionStatus.AD_UNAVAILABLE -> stringResource(R.string.companion_ad_unavailable)
+    CompanionActionStatus.IDLE -> ""
+}
 
 @Composable
 private fun CollectionScreen(state: MazeBloomUiState, model: MazeBloomViewModel) {
@@ -1295,9 +1636,47 @@ private fun SettingsScreen(state: MazeBloomUiState, model: MazeBloomViewModel) {
                 Column(Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         ModeGlyph("◐", MaterialTheme.colorScheme.secondary, Modifier.size(42.dp))
-                        Text(stringResource(R.string.theme_mode), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 12.dp))
+                        Text(stringResource(R.string.theme_settings), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(start = 12.dp))
                     }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(stringResource(R.string.theme_palette), style = MaterialTheme.typography.titleSmall)
+                    Text(
+                        stringResource(R.string.theme_palette_description),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        listOf(
+                            ThemePalette.LIVING_GARDEN to R.string.theme_living_garden,
+                            ThemePalette.ROSE_GARDEN to R.string.theme_rose_garden,
+                            ThemePalette.MOONLIT_POND to R.string.theme_moonlit_pond,
+                            ThemePalette.GOLDEN_MEADOW to R.string.theme_golden_meadow,
+                        ).forEach { (palette, label) ->
+                            FilterChip(
+                                selected = settings.themePalette == palette,
+                                onClick = { model.updateSettings(settings.copy(themePalette = palette)) },
+                                label = { Text(stringResource(label)) },
+                                leadingIcon = {
+                                    Box(
+                                        Modifier
+                                            .size(14.dp)
+                                            .clip(CircleShape)
+                                            .background(themePaletteSwatch(palette)),
+                                    )
+                                },
+                                modifier = Modifier.sizeIn(minHeight = 48.dp),
+                            )
+                        }
+                    }
+                    Text(stringResource(R.string.theme_mode), style = MaterialTheme.typography.titleSmall)
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
                         listOf(
                             ThemeMode.SYSTEM to R.string.theme_system,
                             ThemeMode.LIGHT to R.string.theme_light,
@@ -1307,7 +1686,7 @@ private fun SettingsScreen(state: MazeBloomUiState, model: MazeBloomViewModel) {
                                 selected = settings.themeMode == mode,
                                 onClick = { model.updateSettings(settings.copy(themeMode = mode)) },
                                 label = { Text(stringResource(label)) },
-                                modifier = Modifier.weight(1f).sizeIn(minHeight = 48.dp),
+                                modifier = Modifier.sizeIn(minWidth = 88.dp, minHeight = 48.dp),
                             )
                         }
                     }

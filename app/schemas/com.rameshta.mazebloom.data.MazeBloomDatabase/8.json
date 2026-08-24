@@ -1,0 +1,1007 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 8,
+    "identityHash": "a44711b9c638c3559a0237da3161d239",
+    "entities": [
+      {
+        "tableName": "level_progress",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`levelId` TEXT NOT NULL, `campaignOrder` INTEGER NOT NULL, `chapterId` TEXT NOT NULL, `stars` INTEGER NOT NULL, `bestMoves` INTEGER NOT NULL, `bestReplay` TEXT NOT NULL, PRIMARY KEY(`levelId`))",
+        "fields": [
+          {
+            "fieldPath": "levelId",
+            "columnName": "levelId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "campaignOrder",
+            "columnName": "campaignOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chapterId",
+            "columnName": "chapterId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "stars",
+            "columnName": "stars",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bestMoves",
+            "columnName": "bestMoves",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bestReplay",
+            "columnName": "bestReplay",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "levelId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_level_progress_campaignOrder",
+            "unique": false,
+            "columnNames": [
+              "campaignOrder"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_level_progress_campaignOrder` ON `${TABLE_NAME}` (`campaignOrder`)"
+          },
+          {
+            "name": "index_level_progress_chapterId",
+            "unique": false,
+            "columnNames": [
+              "chapterId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_level_progress_chapterId` ON `${TABLE_NAME}` (`chapterId`)"
+          }
+        ]
+      },
+      {
+        "tableName": "active_attempts",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`levelId` TEXT NOT NULL, `campaignOrder` INTEGER NOT NULL, `contentVersion` INTEGER NOT NULL, `rulesVersion` INTEGER NOT NULL, `definitionChecksum` TEXT NOT NULL, `seedCell` INTEGER NOT NULL, `bloomBits` INTEGER NOT NULL, `remainingBudBits` INTEGER NOT NULL, `moveCount` INTEGER NOT NULL, `status` TEXT NOT NULL, `replay` TEXT NOT NULL, PRIMARY KEY(`levelId`))",
+        "fields": [
+          {
+            "fieldPath": "levelId",
+            "columnName": "levelId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "campaignOrder",
+            "columnName": "campaignOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "contentVersion",
+            "columnName": "contentVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rulesVersion",
+            "columnName": "rulesVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "definitionChecksum",
+            "columnName": "definitionChecksum",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seedCell",
+            "columnName": "seedCell",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bloomBits",
+            "columnName": "bloomBits",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remainingBudBits",
+            "columnName": "remainingBudBits",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "moveCount",
+            "columnName": "moveCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "replay",
+            "columnName": "replay",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "levelId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_active_attempts_campaignOrder",
+            "unique": false,
+            "columnNames": [
+              "campaignOrder"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_active_attempts_campaignOrder` ON `${TABLE_NAME}` (`campaignOrder`)"
+          }
+        ]
+      },
+      {
+        "tableName": "campaign_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `currentLevelId` TEXT NOT NULL, `highestUnlockedCampaignOrder` INTEGER NOT NULL, `legacyImportComplete` INTEGER NOT NULL, `coins` INTEGER NOT NULL, `pendingInterstitial` INTEGER NOT NULL, `coinEconomyVersion` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "currentLevelId",
+            "columnName": "currentLevelId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "highestUnlockedCampaignOrder",
+            "columnName": "highestUnlockedCampaignOrder",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "legacyImportComplete",
+            "columnName": "legacyImportComplete",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "coins",
+            "columnName": "coins",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pendingInterstitial",
+            "columnName": "pendingInterstitial",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "coinEconomyVersion",
+            "columnName": "coinEconomyVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "daily_selection",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `challengeKey` TEXT NOT NULL, `localDate` TEXT NOT NULL, `epochDay` INTEGER NOT NULL, `poolVersion` INTEGER NOT NULL, `fullDefinition` TEXT NOT NULL, `firstOpenedAt` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "challengeKey",
+            "columnName": "challengeKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "localDate",
+            "columnName": "localDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "epochDay",
+            "columnName": "epochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "poolVersion",
+            "columnName": "poolVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fullDefinition",
+            "columnName": "fullDefinition",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "firstOpenedAt",
+            "columnName": "firstOpenedAt",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "daily_completions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`challengeKey` TEXT NOT NULL, `localDate` TEXT NOT NULL, `epochDay` INTEGER NOT NULL, `bestMoves` INTEGER NOT NULL, PRIMARY KEY(`challengeKey`))",
+        "fields": [
+          {
+            "fieldPath": "challengeKey",
+            "columnName": "challengeKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "localDate",
+            "columnName": "localDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "epochDay",
+            "columnName": "epochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "bestMoves",
+            "columnName": "bestMoves",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "challengeKey"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_daily_completions_localDate",
+            "unique": false,
+            "columnNames": [
+              "localDate"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_daily_completions_localDate` ON `${TABLE_NAME}` (`localDate`)"
+          },
+          {
+            "name": "index_daily_completions_epochDay",
+            "unique": false,
+            "columnNames": [
+              "epochDay"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_daily_completions_epochDay` ON `${TABLE_NAME}` (`epochDay`)"
+          }
+        ]
+      },
+      {
+        "tableName": "daily_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `lastAdvancedLocalDate` TEXT NOT NULL, `lastAdvancedEpochDay` INTEGER NOT NULL, `streak` INTEGER NOT NULL, `lastCompletedEpochDay` INTEGER NOT NULL, `lastCoinGrantLocalDate` TEXT NOT NULL, `lastCoinGrantEpochDay` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastAdvancedLocalDate",
+            "columnName": "lastAdvancedLocalDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastAdvancedEpochDay",
+            "columnName": "lastAdvancedEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "streak",
+            "columnName": "streak",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastCompletedEpochDay",
+            "columnName": "lastCompletedEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastCoinGrantLocalDate",
+            "columnName": "lastCoinGrantLocalDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lastCoinGrantEpochDay",
+            "columnName": "lastCoinGrantEpochDay",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "ad_grants",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`transactionId` TEXT NOT NULL, `rewardType` TEXT NOT NULL, PRIMARY KEY(`transactionId`))",
+        "fields": [
+          {
+            "fieldPath": "transactionId",
+            "columnName": "transactionId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rewardType",
+            "columnName": "rewardType",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "transactionId"
+          ]
+        }
+      },
+      {
+        "tableName": "skipped_levels",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`levelId` TEXT NOT NULL, PRIMARY KEY(`levelId`))",
+        "fields": [
+          {
+            "fieldPath": "levelId",
+            "columnName": "levelId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "levelId"
+          ]
+        }
+      },
+      {
+        "tableName": "companion_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `selectedCompanionId` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "selectedCompanionId",
+            "columnName": "selectedCompanionId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "unlocked_companions",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`companionId` TEXT NOT NULL, PRIMARY KEY(`companionId`))",
+        "fields": [
+          {
+            "fieldPath": "companionId",
+            "columnName": "companionId",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "companionId"
+          ]
+        }
+      },
+      {
+        "tableName": "auto_progressive_state",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `baselineRoot` TEXT NOT NULL, `historyRoot` TEXT NOT NULL, `nextPlayableOrdinal` INTEGER NOT NULL, `acceptedGeneratedCount` INTEGER NOT NULL, `nextGenerationOrdinal` INTEGER NOT NULL, `generationSegmentId` INTEGER NOT NULL, `generationState` TEXT NOT NULL, `terminalReason` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baselineRoot",
+            "columnName": "baselineRoot",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "historyRoot",
+            "columnName": "historyRoot",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextPlayableOrdinal",
+            "columnName": "nextPlayableOrdinal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "acceptedGeneratedCount",
+            "columnName": "acceptedGeneratedCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextGenerationOrdinal",
+            "columnName": "nextGenerationOrdinal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generationSegmentId",
+            "columnName": "generationSegmentId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generationState",
+            "columnName": "generationState",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "terminalReason",
+            "columnName": "terminalReason",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "generation_segments",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `startOrdinal` INTEGER NOT NULL, `namespaceVersion` INTEGER NOT NULL, `generatorVersion` INTEGER NOT NULL, `certificationProfileVersion` INTEGER NOT NULL, `fingerprintVersion` INTEGER NOT NULL, `uniquenessProfileVersion` INTEGER NOT NULL, `priorHistoryRoot` TEXT NOT NULL, `reason` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startOrdinal",
+            "columnName": "startOrdinal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "namespaceVersion",
+            "columnName": "namespaceVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generatorVersion",
+            "columnName": "generatorVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "certificationProfileVersion",
+            "columnName": "certificationProfileVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fingerprintVersion",
+            "columnName": "fingerprintVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uniquenessProfileVersion",
+            "columnName": "uniquenessProfileVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "priorHistoryRoot",
+            "columnName": "priorHistoryRoot",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "reason",
+            "columnName": "reason",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_generation_segments_startOrdinal",
+            "unique": false,
+            "columnNames": [
+              "startOrdinal"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generation_segments_startOrdinal` ON `${TABLE_NAME}` (`startOrdinal`)"
+          }
+        ]
+      },
+      {
+        "tableName": "generated_levels",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`levelId` TEXT NOT NULL, `ordinal` INTEGER NOT NULL, `candidateKey` TEXT NOT NULL, `seedHex` TEXT NOT NULL, `generationSegmentId` INTEGER NOT NULL, `namespaceVersion` INTEGER NOT NULL, `generatorVersion` INTEGER NOT NULL, `certificationProfileVersion` INTEGER NOT NULL, `fingerprintVersion` INTEGER NOT NULL, `uniquenessProfileVersion` INTEGER NOT NULL, `definitionJson` TEXT NOT NULL, `canonicalReplay` TEXT NOT NULL, `certificatePayload` TEXT NOT NULL, `certificateHash` TEXT NOT NULL, `definitionHash` TEXT NOT NULL, `geometricFingerprint` TEXT NOT NULL, `dynamicFingerprint` TEXT NOT NULL, `structuralFingerprint` TEXT NOT NULL, `grammarFingerprint` TEXT NOT NULL, `difficulty` TEXT NOT NULL, `boardSize` INTEGER NOT NULL, `candidateAttempt` INTEGER NOT NULL, `lifecycleState` TEXT NOT NULL, `historyRoot` TEXT NOT NULL, PRIMARY KEY(`levelId`))",
+        "fields": [
+          {
+            "fieldPath": "levelId",
+            "columnName": "levelId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ordinal",
+            "columnName": "ordinal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "candidateKey",
+            "columnName": "candidateKey",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "seedHex",
+            "columnName": "seedHex",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generationSegmentId",
+            "columnName": "generationSegmentId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "namespaceVersion",
+            "columnName": "namespaceVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generatorVersion",
+            "columnName": "generatorVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "certificationProfileVersion",
+            "columnName": "certificationProfileVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fingerprintVersion",
+            "columnName": "fingerprintVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "uniquenessProfileVersion",
+            "columnName": "uniquenessProfileVersion",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "definitionJson",
+            "columnName": "definitionJson",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "canonicalReplay",
+            "columnName": "canonicalReplay",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "certificatePayload",
+            "columnName": "certificatePayload",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "certificateHash",
+            "columnName": "certificateHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "definitionHash",
+            "columnName": "definitionHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "geometricFingerprint",
+            "columnName": "geometricFingerprint",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dynamicFingerprint",
+            "columnName": "dynamicFingerprint",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "structuralFingerprint",
+            "columnName": "structuralFingerprint",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "grammarFingerprint",
+            "columnName": "grammarFingerprint",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "difficulty",
+            "columnName": "difficulty",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "boardSize",
+            "columnName": "boardSize",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "candidateAttempt",
+            "columnName": "candidateAttempt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lifecycleState",
+            "columnName": "lifecycleState",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "historyRoot",
+            "columnName": "historyRoot",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "levelId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_generated_levels_ordinal",
+            "unique": true,
+            "columnNames": [
+              "ordinal"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_generated_levels_ordinal` ON `${TABLE_NAME}` (`ordinal`)"
+          },
+          {
+            "name": "index_generated_levels_candidateKey",
+            "unique": true,
+            "columnNames": [
+              "candidateKey"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_generated_levels_candidateKey` ON `${TABLE_NAME}` (`candidateKey`)"
+          },
+          {
+            "name": "index_generated_levels_definitionHash",
+            "unique": false,
+            "columnNames": [
+              "definitionHash"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generated_levels_definitionHash` ON `${TABLE_NAME}` (`definitionHash`)"
+          },
+          {
+            "name": "index_generated_levels_geometricFingerprint",
+            "unique": false,
+            "columnNames": [
+              "geometricFingerprint"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generated_levels_geometricFingerprint` ON `${TABLE_NAME}` (`geometricFingerprint`)"
+          },
+          {
+            "name": "index_generated_levels_dynamicFingerprint",
+            "unique": false,
+            "columnNames": [
+              "dynamicFingerprint"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generated_levels_dynamicFingerprint` ON `${TABLE_NAME}` (`dynamicFingerprint`)"
+          },
+          {
+            "name": "index_generated_levels_structuralFingerprint",
+            "unique": false,
+            "columnNames": [
+              "structuralFingerprint"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generated_levels_structuralFingerprint` ON `${TABLE_NAME}` (`structuralFingerprint`)"
+          },
+          {
+            "name": "index_generated_levels_grammarFingerprint",
+            "unique": false,
+            "columnNames": [
+              "grammarFingerprint"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generated_levels_grammarFingerprint` ON `${TABLE_NAME}` (`grammarFingerprint`)"
+          },
+          {
+            "name": "index_generated_levels_lifecycleState",
+            "unique": false,
+            "columnNames": [
+              "lifecycleState"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generated_levels_lifecycleState` ON `${TABLE_NAME}` (`lifecycleState`)"
+          }
+        ]
+      },
+      {
+        "tableName": "generated_uniqueness",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`levelId` TEXT NOT NULL, `transformId` INTEGER NOT NULL, `ordinal` INTEGER NOT NULL, `boardSize` INTEGER NOT NULL, `wallBits` INTEGER NOT NULL, `budBits` INTEGER NOT NULL, `startCell` INTEGER NOT NULL, `definitionHash` TEXT NOT NULL, `geometricEncoding` TEXT NOT NULL, PRIMARY KEY(`levelId`, `transformId`))",
+        "fields": [
+          {
+            "fieldPath": "levelId",
+            "columnName": "levelId",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "transformId",
+            "columnName": "transformId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ordinal",
+            "columnName": "ordinal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "boardSize",
+            "columnName": "boardSize",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "wallBits",
+            "columnName": "wallBits",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "budBits",
+            "columnName": "budBits",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startCell",
+            "columnName": "startCell",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "definitionHash",
+            "columnName": "definitionHash",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "geometricEncoding",
+            "columnName": "geometricEncoding",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "levelId",
+            "transformId"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_generated_uniqueness_ordinal",
+            "unique": false,
+            "columnNames": [
+              "ordinal"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generated_uniqueness_ordinal` ON `${TABLE_NAME}` (`ordinal`)"
+          },
+          {
+            "name": "index_generated_uniqueness_definitionHash",
+            "unique": false,
+            "columnNames": [
+              "definitionHash"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generated_uniqueness_definitionHash` ON `${TABLE_NAME}` (`definitionHash`)"
+          },
+          {
+            "name": "index_generated_uniqueness_geometricEncoding",
+            "unique": false,
+            "columnNames": [
+              "geometricEncoding"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_generated_uniqueness_geometricEncoding` ON `${TABLE_NAME}` (`geometricEncoding`)"
+          }
+        ]
+      },
+      {
+        "tableName": "generation_checkpoint",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `baselineRoot` TEXT NOT NULL, `generationSegmentId` INTEGER NOT NULL, `targetOrdinal` INTEGER NOT NULL, `historyRootAtStart` TEXT NOT NULL, `nextAttempt` INTEGER NOT NULL, `cheapSurvivors` INTEGER NOT NULL, `fullSurvivors` INTEGER NOT NULL, `rejectionSummary` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "baselineRoot",
+            "columnName": "baselineRoot",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "generationSegmentId",
+            "columnName": "generationSegmentId",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "targetOrdinal",
+            "columnName": "targetOrdinal",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "historyRootAtStart",
+            "columnName": "historyRootAtStart",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nextAttempt",
+            "columnName": "nextAttempt",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "cheapSurvivors",
+            "columnName": "cheapSurvivors",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "fullSurvivors",
+            "columnName": "fullSurvivors",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "rejectionSummary",
+            "columnName": "rejectionSummary",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a44711b9c638c3559a0237da3161d239')"
+    ]
+  }
+}

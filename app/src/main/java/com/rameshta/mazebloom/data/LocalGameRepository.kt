@@ -42,9 +42,12 @@ data class PlayerSettings(
     val highContrast: Boolean = false,
     val directionButtons: Boolean = false,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val themePalette: ThemePalette = ThemePalette.LIVING_GARDEN,
 )
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
+
+enum class ThemePalette { LIVING_GARDEN, ROSE_GARDEN, MOONLIT_POND, GOLDEN_MEADOW }
 
 data class ActiveAttempt(
     val levelId: String,
@@ -105,6 +108,10 @@ interface ProgressRepository {
     suspend fun takeInterstitialDue(): Boolean
     suspend fun claimAdAction(transactionId: String, rewardType: String): Boolean
     suspend fun skippedLevelIds(): Set<String>
+    suspend fun companionCollection(): CompanionCollectionState
+    suspend fun purchaseCompanion(companionId: String): CompanionPurchaseResult
+    suspend fun rewardCompanionWithAd(companionId: String, transactionId: String): CompanionAdRewardOutcome
+    suspend fun selectCompanion(companionId: String): Boolean
 }
 
 private val Context.mazeBloomSettings by preferencesDataStore(name = "mazebloom_settings")
@@ -114,6 +121,7 @@ private val settingMotion = booleanPreferencesKey("reduced_motion")
 private val settingContrast = booleanPreferencesKey("high_contrast")
 private val settingDirections = booleanPreferencesKey("direction_buttons")
 private val settingTheme = stringPreferencesKey("theme_mode")
+private val settingThemePalette = stringPreferencesKey("theme_palette")
 private val settingsImported = booleanPreferencesKey("legacy_import_complete")
 
 /** Sparse Room progress plus DataStore preferences. Static level definitions remain asset-only. */
@@ -198,20 +206,23 @@ class RoomProgressRepository(
             highContrast = values[settingContrast] ?: false,
             directionButtons = values[settingDirections] ?: false,
             themeMode = values[settingTheme]?.let { runCatching { ThemeMode.valueOf(it) }.getOrNull() } ?: ThemeMode.SYSTEM,
+            themePalette = values[settingThemePalette]?.let { runCatching { ThemePalette.valueOf(it) }.getOrNull() }
+                ?: ThemePalette.LIVING_GARDEN,
         )
     }
 
     override suspend fun updateSettings(settings: PlayerSettings) {
         io {
-        context.mazeBloomSettings.edit { values ->
-            values[settingSound] = settings.sound
-            values[settingHaptics] = settings.haptics
-            values[settingMotion] = settings.reducedMotion
-            values[settingContrast] = settings.highContrast
-            values[settingDirections] = settings.directionButtons
-            values[settingTheme] = settings.themeMode.name
-            values[settingsImported] = true
-        }
+            context.mazeBloomSettings.edit { values ->
+                values[settingSound] = settings.sound
+                values[settingHaptics] = settings.haptics
+                values[settingMotion] = settings.reducedMotion
+                values[settingContrast] = settings.highContrast
+                values[settingDirections] = settings.directionButtons
+                values[settingTheme] = settings.themeMode.name
+                values[settingThemePalette] = settings.themePalette.name
+                values[settingsImported] = true
+            }
         }
     }
 
@@ -272,6 +283,43 @@ class RoomProgressRepository(
         dao.insertAdGrant(AdGrantEntity(transactionId, rewardType)) != -1L
     }
     override suspend fun skippedLevelIds(): Set<String> = io { dao.skippedLevelIds().toSet() }
+    override suspend fun companionCollection(): CompanionCollectionState = io {
+        val state = dao.companionState()
+        val purchased = dao.unlockedCompanionIds().filterTo(mutableSetOf()) { CompanionCatalog.find(it) != null }
+        val adCredits = dao.companionAdRewardCounts().mapNotNull { row ->
+            val companionId = row.rewardType.removePrefix(COMPANION_REWARD_PREFIX)
+            val companion = CompanionCatalog.find(companionId) ?: return@mapNotNull null
+            if (companionId in purchased) return@mapNotNull null
+            companionId to (row.rewardCount * CompanionCatalog.REWARDED_AD_CREDIT).coerceAtMost(companion.price)
+        }.toMap()
+        CompanionCollectionState(
+            selectedId = state.selectedCompanionId.takeIf { it == CompanionCatalog.FIRST_COMPANION_ID || it in purchased }
+                ?: CompanionCatalog.FIRST_COMPANION_ID,
+            purchasedIds = purchased,
+            adCreditsById = adCredits,
+        )
+    }
+    override suspend fun purchaseCompanion(companionId: String): CompanionPurchaseResult = io {
+        val companion = requireNotNull(CompanionCatalog.find(companionId)) { "Unknown Companion: $companionId" }
+        require(companion.price > 0) { "The first Companion is free" }
+        dao.purchaseCompanion(companion.id, companion.price)
+    }
+    override suspend fun rewardCompanionWithAd(companionId: String, transactionId: String): CompanionAdRewardOutcome = io {
+        val companion = requireNotNull(CompanionCatalog.find(companionId)) { "Unknown Companion: $companionId" }
+        require(companion.price > 0) { "The first Companion is free" }
+        require(transactionId.isNotBlank()) { "Reward transaction ID is required" }
+        dao.rewardCompanionWithAd(
+            companionId = companion.id,
+            price = companion.price,
+            rewardCoins = CompanionCatalog.REWARDED_AD_CREDIT,
+            transactionId = transactionId,
+            rewardType = "$COMPANION_REWARD_PREFIX${companion.id}",
+        )
+    }
+    override suspend fun selectCompanion(companionId: String): Boolean = io {
+        requireNotNull(CompanionCatalog.find(companionId)) { "Unknown Companion: $companionId" }
+        dao.selectCompanion(companionId)
+    }
 
     private fun importLegacySharedPreferences() {
         if (dao.campaignState().legacyImportComplete) return
@@ -366,6 +414,7 @@ class RoomProgressRepository(
             withContext(Dispatchers.IO) {
                 dao.insertCampaignState(CampaignStateEntity())
                 dao.insertDailyState(DailyStateEntity())
+                dao.insertCompanionState(CompanionStateEntity())
                 val historyRoot = endlessInitialHistoryRoot()
                 dao.insertAutoProgressiveState(
                     AutoProgressiveStateEntity(
@@ -403,8 +452,10 @@ class InMemoryProgressRepository : ProgressRepository {
     private var coins = 0
     private var highestUnlocked = 1
     private var pendingInterstitial = false
-    private val adGrants = mutableSetOf<String>()
+    private val adGrants = mutableMapOf<String, String>()
     private val skippedLevels = mutableSetOf<String>()
+    private val purchasedCompanions = mutableSetOf<String>()
+    private var selectedCompanionId = CompanionCatalog.FIRST_COMPANION_ID
 
     override suspend fun progress(levelId: String) = progress[levelId]
     override suspend fun allProgress(): Map<String, LevelProgress> = progress.toMap()
@@ -486,11 +537,78 @@ class InMemoryProgressRepository : ProgressRepository {
         attempts.remove(level.id)
     }
     override suspend fun takeInterstitialDue(): Boolean = pendingInterstitial.also { pendingInterstitial = false }
-    override suspend fun claimAdAction(transactionId: String, rewardType: String): Boolean = adGrants.add(transactionId)
+    override suspend fun claimAdAction(transactionId: String, rewardType: String): Boolean =
+        adGrants.putIfAbsent(transactionId, rewardType) == null
     override suspend fun skippedLevelIds(): Set<String> = skippedLevels.toSet()
+    override suspend fun companionCollection(): CompanionCollectionState {
+        val adCredits = CompanionCatalog.all.asSequence()
+            .filter { it.id !in purchasedCompanions && it.price > 0 }
+            .mapNotNull { companion ->
+                val rewardCount = adGrants.values.count { it == "$COMPANION_REWARD_PREFIX${companion.id}" }
+                rewardCount.takeIf { it > 0 }?.let {
+                    companion.id to (it * CompanionCatalog.REWARDED_AD_CREDIT).coerceAtMost(companion.price)
+                }
+            }
+            .toMap()
+        return CompanionCollectionState(selectedCompanionId, purchasedCompanions.toSet(), adCredits)
+    }
+    override suspend fun purchaseCompanion(companionId: String): CompanionPurchaseResult {
+        val companion = requireNotNull(CompanionCatalog.find(companionId))
+        require(companion.price > 0)
+        if (progress.keys.count { it.startsWith("campaign-") } < CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS) {
+            return CompanionPurchaseResult.FEATURE_LOCKED
+        }
+        if (companionId in purchasedCompanions) {
+            selectedCompanionId = companionId
+            return CompanionPurchaseResult.ALREADY_OWNED
+        }
+        val adCredit = adGrants.values.count { it == "$COMPANION_REWARD_PREFIX$companionId" } * CompanionCatalog.REWARDED_AD_CREDIT
+        val remainingPrice = (companion.price - adCredit).coerceAtLeast(0)
+        if (coins < remainingPrice) return CompanionPurchaseResult.INSUFFICIENT_COINS
+        coins -= remainingPrice
+        purchasedCompanions += companionId
+        selectedCompanionId = companionId
+        return CompanionPurchaseResult.PURCHASED
+    }
+    override suspend fun rewardCompanionWithAd(companionId: String, transactionId: String): CompanionAdRewardOutcome {
+        val companion = requireNotNull(CompanionCatalog.find(companionId))
+        require(companion.price > 0 && transactionId.isNotBlank())
+        if (progress.keys.count { it.startsWith("campaign-") } < CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS) {
+            return CompanionAdRewardOutcome(CompanionAdRewardResult.FEATURE_LOCKED, 0, companion.price)
+        }
+        if (companionId in purchasedCompanions) {
+            selectedCompanionId = companionId
+            return CompanionAdRewardOutcome(CompanionAdRewardResult.ALREADY_OWNED, companion.price, 0)
+        }
+        val rewardType = "$COMPANION_REWARD_PREFIX$companionId"
+        if (adGrants.putIfAbsent(transactionId, rewardType) != null) {
+            val credited = adGrants.values.count { it == rewardType } * CompanionCatalog.REWARDED_AD_CREDIT
+            return CompanionAdRewardOutcome(
+                CompanionAdRewardResult.DUPLICATE_REWARD,
+                credited.coerceAtMost(companion.price),
+                (companion.price - credited).coerceAtLeast(0),
+            )
+        }
+        val credited = (adGrants.values.count { it == rewardType } * CompanionCatalog.REWARDED_AD_CREDIT)
+            .coerceAtMost(companion.price)
+        if (credited >= companion.price) {
+            purchasedCompanions += companionId
+            selectedCompanionId = companionId
+            return CompanionAdRewardOutcome(CompanionAdRewardResult.UNLOCKED, companion.price, 0)
+        }
+        return CompanionAdRewardOutcome(CompanionAdRewardResult.PROGRESS, credited, companion.price - credited)
+    }
+    override suspend fun selectCompanion(companionId: String): Boolean {
+        requireNotNull(CompanionCatalog.find(companionId))
+        if (progress.keys.count { it.startsWith("campaign-") } < CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS) return false
+        if (companionId != CompanionCatalog.FIRST_COMPANION_ID && companionId !in purchasedCompanions) return false
+        selectedCompanionId = companionId
+        return true
+    }
 }
 
 private fun encodeDirections(directions: List<Direction>) = directions.joinToString(",") { it.name }
+private const val COMPANION_REWARD_PREFIX = "companion:"
 private fun decodeDirections(value: String) = if (value.isBlank()) emptyList() else value.split(',').map(Direction::valueOf)
 private fun campaignId(order: Int): String = "campaign-${order.toString().padStart(if (order <= 100) 3 else 4, '0')}"
 private fun chapterId(order: Int): String = if (order <= 0) "daily" else {
