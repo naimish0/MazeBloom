@@ -38,7 +38,7 @@ class FakeAdsGateway(
 }
 
 object AppOpenAdPolicy {
-    const val COOLDOWN_MS = 2L * 60L * 60L * 1_000L
+    const val COOLDOWN_MS = 60L * 60L * 1_000L
 
     fun isCooldownElapsed(lastShownAtMs: Long, nowMs: Long): Boolean =
         lastShownAtMs <= 0L || (nowMs >= lastShownAtMs && nowMs - lastShownAtMs >= COOLDOWN_MS)
@@ -107,7 +107,8 @@ enum class AnalyticsEvent {
     APP_OPENED, ONBOARDING_STEP, LEVEL_STARTED, LEVEL_COMPLETED, LEVEL_ABANDONED,
     LEVEL_RESTARTED, UNDO_USED, HINT_REQUESTED, HINT_SHOWN, DAILY_STARTED,
     DAILY_COMPLETED, REPLAY_STARTED, SHARE_REQUESTED, GENERATOR_FALLBACK_OR_ERROR,
-    AD_REQUEST, AD_RESULT, PURCHASE_REQUEST, PURCHASE_RESULT,
+    AD_REQUEST, AD_RESULT, PURCHASE_REQUEST, PURCHASE_RESULT, COMPANION_PURCHASED,
+    COMPANION_SELECTED,
 }
 
 interface Analytics {

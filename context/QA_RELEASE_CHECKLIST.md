@@ -6,9 +6,9 @@
 - [x] BFS, budgets, replay codec/checksum, SplitMix64, D4, strict-similarity tests.
 - [x] Fast exact packaged-content verification for 2,000 Campaign levels, 100 shards, 120 Daily levels, and 100 Progressive levels.
 - [x] Full re-solve of 2,220 levels and exhaustive 2,463,090-pair / 11,691,120-alignment uniqueness certification.
-- [x] Progression and 100→2,000 compatibility fixtures plus persistence, daily/first-completion Coins, atomic Hint/Undo/Skip spending, rewarded-ad idempotency, every-five cadence, App Open cooldown, and post-reward protection tests.
+- [x] Progression and 100→2,000 compatibility fixtures plus persistence, daily/first-completion Coins, atomic Hint/Undo/Skip spending, rewarded-ad idempotency, every-five cadence, App Open cooldown, post-reward protection, Companion unlock/price/atomic-purchase tests, scoped 50-Coin Companion ad-credit tests, and stable/distinct multi-theme token tests.
 - [x] Exact 2,220-record Endless baseline and 1,000 generated-level horizon: 2,719,500 new obligations / 5,182,590 independent corpus pairs / zero new collisions.
-- [x] Room v1→2→3→4→5→6→7 and real exported migration tests compile; the new v6→7 execution still requires a connected instrumentation run.
+- [x] Room v1→2→3→4→5→6→7→8 exported migrations compile and the v1/v2→8 chains pass on Samsung SM-S928B.
 - [x] Final debug unit tests, lint, APK, release-shrunk bundle, and aggregate check (recorded in the implementation report).
 - [x] R8 full-mode optimization and optimized resource shrinking enabled with retraceable line information and app debug/info log stripping.
 - [x] Offline release variant excludes Google ads/UMP dependencies and ad/network permissions; live-ads production variant is separately gated.
@@ -16,6 +16,7 @@
 - [x] Static privacy policy, in-app policy link, Data safety worksheet, secure signing injection, and fail-closed Play bundle gates implemented.
 - [x] Six connected instrumentation tests on Samsung SM-S928B / Android 16 cover the previous Room v1→6/v2→6 migration path and 1,000-row storage growth.
 - [x] Samsung SM-S928B official rewarded test creative completed through the real SDK callback; an immediate standard-interstitial diagnostic was suppressed by the persisted 60-second protection.
+- [x] Samsung SM-S928B renders all 100 Companion catalog entries through Android Canvas; the atomic Coin purchase/rollback and scoped idempotent rewarded-ad unlock Room tests pass; Continue growing opens with the selected Companion using preserved player data.
 - [ ] Connected Compose UI automation and the full manual device/accessibility matrix.
 
 ## Manual device matrix
@@ -27,11 +28,12 @@
 - [ ] Daily in airplane mode; same-day relaunch, forward date, backward date, and timezone cases grant 30 Coins only on a forward day.
 - [ ] Share captures the visible emoji/confetti/result screen, grants only the cache URI, and includes the Play Store app URL.
 - [ ] Phone, foldable, 7-inch, and 10-inch layouts.
-- [ ] Large font, reduced motion, high contrast, direction buttons, TalkBack.
+- [ ] All four color themes in System/Light/Dark, plus large font, reduced motion, high contrast, direction buttons, and TalkBack.
 - [ ] Completion emoji/confetti with standard and reduced motion, including emoji visibility behind/in front of the result sheet.
+- [ ] Campaign levels 1–9 retain the Seed; level 10 unlocks free Meadow Mouse; all 100 Companions render, animate, filter, purchase, persist, switch, and appear on the board/celebration; verify Reduced motion, insufficient-Coin behavior, partial 50-Coin ad-credit persistence, two-ad unlock of a 100-Coin Companion, and unavailable/incomplete ads.
 - [ ] 10-Coin first-completion reward; 30-Coin Hint and Undo; 50-Coin Skip; insufficient-balance rewarded affordances; duplicate/unavailable callbacks; and unchanged balance on rewarded authorization.
 - [ ] Fifth first completion attempts the standard interstitial immediately after solve; a completed reward suppresses it for 60 seconds, including across process recreation.
-- [ ] App Open on cold/foreground entry, consent/lifecycle failures, no full-screen overlap, and persisted two-hour cooldown from a confirmed impression.
+- [ ] App Open on cold/foreground entry, consent/lifecycle failures, no full-screen overlap, and persisted one-hour cooldown from a confirmed impression.
 - [ ] Campaign 2,000 → Endless unlock → immutable starter 1–100 → generated 101+, including Coin-funded and rewarded Skip plus process relaunch.
 - [ ] Low-storage `STORAGE_BLOCKED` retry preserves the same history/candidate; capture actual Room growth for 1,000 representative rows.
 - [ ] Representative low-memory, mid-range, and high-end generation latency/memory/heat/battery runs.

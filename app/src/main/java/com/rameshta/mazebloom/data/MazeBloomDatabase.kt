@@ -60,9 +60,25 @@ data class AdGrantEntity(
     val rewardType: String,
 )
 
+data class CompanionAdRewardCount(
+    val rewardType: String,
+    val rewardCount: Int,
+)
+
 @Entity(tableName = "skipped_levels")
 data class SkippedLevelEntity(
     @PrimaryKey val levelId: String,
+)
+
+@Entity(tableName = "companion_state")
+data class CompanionStateEntity(
+    @PrimaryKey val id: Int = 1,
+    val selectedCompanionId: String = CompanionCatalog.FIRST_COMPANION_ID,
+)
+
+@Entity(tableName = "unlocked_companions")
+data class UnlockedCompanionEntity(
+    @PrimaryKey val companionId: String,
 )
 
 @Entity(tableName = "auto_progressive_state")
@@ -216,6 +232,96 @@ abstract class MazeBloomDao {
 
     @Query("UPDATE campaign_state SET coins = coins - :amount WHERE id = 1 AND coins >= :amount")
     abstract fun spendCoins(amount: Int): Int
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    abstract fun insertCompanionState(state: CompanionStateEntity): Long
+
+    @Query("SELECT * FROM companion_state WHERE id = 1")
+    abstract fun companionState(): CompanionStateEntity
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    abstract fun insertUnlockedCompanion(companion: UnlockedCompanionEntity): Long
+
+    @Query("SELECT companionId FROM unlocked_companions")
+    abstract fun unlockedCompanionIds(): List<String>
+
+    @Query("SELECT EXISTS(SELECT 1 FROM unlocked_companions WHERE companionId = :companionId)")
+    abstract fun isCompanionUnlocked(companionId: String): Boolean
+
+    @Query("SELECT COUNT(*) FROM ad_grants WHERE rewardType = :rewardType")
+    abstract fun companionAdRewardCount(rewardType: String): Int
+
+    @Query("SELECT rewardType, COUNT(*) AS rewardCount FROM ad_grants WHERE rewardType LIKE 'companion:%' GROUP BY rewardType")
+    abstract fun companionAdRewardCounts(): List<CompanionAdRewardCount>
+
+    @Query("SELECT COUNT(*) FROM level_progress WHERE campaignOrder > 0")
+    abstract fun completedCampaignLevelCount(): Int
+
+    @Query("UPDATE companion_state SET selectedCompanionId = :companionId WHERE id = 1")
+    abstract fun updateSelectedCompanion(companionId: String): Int
+
+    @Transaction
+    open fun purchaseCompanion(companionId: String, price: Int): CompanionPurchaseResult {
+        require(companionId.isNotBlank() && price > 0)
+        if (completedCampaignLevelCount() < CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS) {
+            return CompanionPurchaseResult.FEATURE_LOCKED
+        }
+        if (companionId == CompanionCatalog.FIRST_COMPANION_ID || isCompanionUnlocked(companionId)) {
+            updateSelectedCompanion(companionId)
+            return CompanionPurchaseResult.ALREADY_OWNED
+        }
+        val rewardType = "companion:$companionId"
+        val adCredit = companionAdRewardCount(rewardType) * CompanionCatalog.REWARDED_AD_CREDIT
+        val remainingPrice = (price - adCredit).coerceAtLeast(0)
+        if (coinBalance() < remainingPrice) return CompanionPurchaseResult.INSUFFICIENT_COINS
+        check(insertUnlockedCompanion(UnlockedCompanionEntity(companionId)) != -1L)
+        if (remainingPrice > 0) check(spendCoins(remainingPrice) == 1)
+        check(updateSelectedCompanion(companionId) == 1)
+        return CompanionPurchaseResult.PURCHASED
+    }
+
+    @Transaction
+    open fun rewardCompanionWithAd(
+        companionId: String,
+        price: Int,
+        rewardCoins: Int,
+        transactionId: String,
+        rewardType: String,
+    ): CompanionAdRewardOutcome {
+        require(
+            companionId.isNotBlank() && price > 0 && rewardCoins == CompanionCatalog.REWARDED_AD_CREDIT &&
+                transactionId.isNotBlank() && rewardType == "companion:$companionId",
+        )
+        if (completedCampaignLevelCount() < CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS) {
+            return CompanionAdRewardOutcome(CompanionAdRewardResult.FEATURE_LOCKED, 0, price)
+        }
+        if (companionId == CompanionCatalog.FIRST_COMPANION_ID || isCompanionUnlocked(companionId)) {
+            updateSelectedCompanion(companionId)
+            return CompanionAdRewardOutcome(CompanionAdRewardResult.ALREADY_OWNED, price, 0)
+        }
+        if (insertAdGrant(AdGrantEntity(transactionId, rewardType)) == -1L) {
+            val credited = (companionAdRewardCount(rewardType) * rewardCoins).coerceAtMost(price)
+            return CompanionAdRewardOutcome(
+                CompanionAdRewardResult.DUPLICATE_REWARD,
+                credited,
+                (price - credited).coerceAtLeast(0),
+            )
+        }
+        val credited = (companionAdRewardCount(rewardType) * rewardCoins).coerceAtMost(price)
+        if (credited < price) {
+            return CompanionAdRewardOutcome(CompanionAdRewardResult.PROGRESS, credited, price - credited)
+        }
+        check(insertUnlockedCompanion(UnlockedCompanionEntity(companionId)) != -1L)
+        check(updateSelectedCompanion(companionId) == 1)
+        return CompanionAdRewardOutcome(CompanionAdRewardResult.UNLOCKED, price, 0)
+    }
+
+    @Transaction
+    open fun selectCompanion(companionId: String): Boolean {
+        if (completedCampaignLevelCount() < CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS) return false
+        if (companionId != CompanionCatalog.FIRST_COMPANION_ID && !isCompanionUnlocked(companionId)) return false
+        return updateSelectedCompanion(companionId) == 1
+    }
 
     @Query(
         """
@@ -582,13 +688,15 @@ abstract class MazeBloomDao {
         DailyStateEntity::class,
         AdGrantEntity::class,
         SkippedLevelEntity::class,
+        CompanionStateEntity::class,
+        UnlockedCompanionEntity::class,
         AutoProgressiveStateEntity::class,
         GenerationSegmentEntity::class,
         GeneratedLevelRecordEntity::class,
         UniquenessRecordEntity::class,
         GenerationCheckpointEntity::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 abstract class MazeBloomDatabase : RoomDatabase() {
@@ -604,7 +712,7 @@ abstract class MazeBloomDatabase : RoomDatabase() {
                 "mazebloom.db",
             ).addMigrations(
                 MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-                MIGRATION_5_6, MIGRATION_6_7,
+                MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8,
             ).build().also { database ->
                 instance = database
             }
@@ -700,6 +808,15 @@ abstract class MazeBloomDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE daily_state ADD COLUMN lastCoinGrantLocalDate TEXT NOT NULL DEFAULT ''")
                 db.execSQL("ALTER TABLE daily_state ADD COLUMN lastCoinGrantEpochDay INTEGER NOT NULL DEFAULT -9223372036854775808")
+            }
+        }
+
+        /** Adds the cosmetic Companion collection without changing certified gameplay state. */
+        val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `companion_state` (`id` INTEGER NOT NULL, `selectedCompanionId` TEXT NOT NULL, PRIMARY KEY(`id`))")
+                db.execSQL("CREATE TABLE IF NOT EXISTS `unlocked_companions` (`companionId` TEXT NOT NULL, PRIMARY KEY(`companionId`))")
+                db.execSQL("INSERT OR IGNORE INTO `companion_state` (`id`, `selectedCompanionId`) VALUES (1, '${CompanionCatalog.FIRST_COMPANION_ID}')")
             }
         }
     }

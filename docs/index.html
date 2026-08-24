@@ -184,7 +184,7 @@
         <h2>2. Data stored on your device</h2>
         <p>MazeBloom stores only the information needed to run the game locally:</p>
         <div class="data-list">
-          <div class="data-item"><strong>Game progress</strong>Completed and skipped levels, stars, best move counts, replays, unlocked content, coin balance, daily streaks, and an unfinished attempt.</div>
+          <div class="data-item"><strong>Game progress</strong>Completed and skipped levels, stars, best move counts, replays, unlocked content, coin balance, daily streaks, selected and permanently unlocked Animal Companions, per-Companion rewarded-ad credit, and an unfinished attempt.</div>
           <div class="data-item"><strong>Preferences</strong>Theme, sound, haptics, reduced motion, high contrast, and direction-control settings.</div>
           <div class="data-item"><strong>Endless Garden history</strong>Generated puzzle definitions, certification records, fingerprints, and local history used to avoid repeats.</div>
           <div class="data-item"><strong>Daily rewards and ad controls</strong>The last local day credited with daily Coins, random rewarded-ad callback identifiers, the last completed rewarded-ad time, and the last confirmed App Open impression time. These values prevent duplicate rewards and enforce ad timing protections.</div>
@@ -196,7 +196,7 @@
         <h2>3. Optional advertising and consent services</h2>
         <p>The offline release does not package the Google Mobile Ads or UMP libraries and does not request internet, network-state, advertising-ID, or Privacy Sandbox ad permissions.</p>
         <p>If the ad-supported production build is installed, it uses Google Mobile Ads SDK 25.4.0 and UMP SDK 4.0.0. UMP refreshes consent information before the ads SDK is initialized or an ad is requested. Where required, UMP displays a consent message and a privacy-options entry is available in MazeBloom Settings.</p>
-        <p>This build may request an App Open ad when MazeBloom enters the foreground, with at least two hours between confirmed App Open impressions. A rewarded ad is requested only when you choose an insufficient-Coin Hint, Undo, or Skip action. A standard interstitial is attempted after every fifth first-time level completion, but is suppressed for 60 seconds after a rewarded ad is completed. Ads that are unavailable or cannot be shown do not block normal gameplay.</p>
+        <p>This build may request an App Open ad when MazeBloom enters the foreground, with at least one hour between confirmed App Open impressions. A rewarded ad is requested only when you choose an insufficient-Coin Hint, Undo, or Skip action, or explicitly choose to apply 50 Coins of credit to one locked Animal Companion. Companion ad credit stays on your device, applies only to that chosen animal, and does not increase your general Coin balance. A standard interstitial is attempted after every fifth first-time level completion, but is suppressed for 60 seconds after a rewarded ad is completed. Ads that are unavailable or cannot be shown do not block normal gameplay or apply a reward.</p>
         <p>Google states that its Mobile Ads SDK automatically collects and shares the following for advertising, analytics, and fraud prevention:</p>
         <ul>
           <li>IP address, which may be used to estimate general location;</li>

@@ -17,6 +17,10 @@ import com.rameshta.mazebloom.core.SolveStatus
 import com.rameshta.mazebloom.core.TransitionResult
 import com.rameshta.mazebloom.data.ContentRepository
 import com.rameshta.mazebloom.data.ContentLoadResult
+import com.rameshta.mazebloom.data.CompanionCatalog
+import com.rameshta.mazebloom.data.CompanionAdRewardResult
+import com.rameshta.mazebloom.data.CompanionCollectionState
+import com.rameshta.mazebloom.data.CompanionPurchaseResult
 import com.rameshta.mazebloom.data.DailySelection
 import com.rameshta.mazebloom.data.LocalDateSource
 import com.rameshta.mazebloom.data.PlayerSettings
@@ -49,6 +53,7 @@ sealed interface AppScreen {
     data class Chapter(val chapterId: String) : AppScreen
     data object Daily : AppScreen
     data object Collection : AppScreen
+    data object Companions : AppScreen
     data object Settings : AppScreen
     data object Endless : AppScreen
     data object Developer : AppScreen
@@ -57,6 +62,10 @@ sealed interface AppScreen {
 
 enum class HintStatus { IDLE, SEARCHING, DIRECTION, DOOMED, UNAVAILABLE }
 enum class AdActionStatus { IDLE, LOADING, UNAVAILABLE }
+enum class CompanionActionStatus {
+    IDLE, PURCHASED, SELECTED, INSUFFICIENT_COINS, FEATURE_LOCKED,
+    AD_LOADING, AD_PROGRESS, AD_UNLOCKED, AD_UNAVAILABLE,
+}
 enum class DebugAdPlacement { INTERSTITIAL, REWARDED }
 internal enum class EconomyPaymentSource { COINS, REWARDED_AD }
 
@@ -95,6 +104,11 @@ data class MazeBloomUiState(
     val progressByLevel: Map<String, LevelProgress> = emptyMap(),
     val highestUnlockedCampaignOrder: Int = 1,
     val coinBalance: Int = 0,
+    val companionCollection: CompanionCollectionState = CompanionCollectionState(),
+    val companionActionStatus: CompanionActionStatus = CompanionActionStatus.IDLE,
+    val companionActionInFlight: Boolean = false,
+    val companionActionTargetId: String? = null,
+    val companionAdRemainingCoins: Int = 0,
     val adActionStatus: AdActionStatus = AdActionStatus.IDLE,
     val economyActionInFlight: Boolean = false,
     val adServicesEnabled: Boolean = false,
@@ -164,7 +178,123 @@ class MazeBloomViewModel(
 
     fun navigate(screen: AppScreen) {
         hintJob?.cancel()
-        _uiState.update { it.copy(screen = screen, hintStatus = HintStatus.IDLE, hintDirection = null) }
+        _uiState.update {
+            it.copy(
+                screen = screen,
+                hintStatus = HintStatus.IDLE,
+                hintDirection = null,
+                companionActionStatus = if (screen == AppScreen.Companions) it.companionActionStatus else CompanionActionStatus.IDLE,
+            )
+        }
+    }
+
+    fun openCompanions() {
+        if (_uiState.value.completedCount < CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS) return
+        navigate(AppScreen.Companions)
+    }
+
+    fun chooseCompanion(companionId: String) {
+        val state = _uiState.value
+        if (state.completedCount < CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS || state.companionActionInFlight) return
+        if (CompanionCatalog.find(companionId) == null) return
+        _uiState.update {
+            it.copy(
+                companionActionInFlight = true,
+                companionActionStatus = CompanionActionStatus.IDLE,
+                companionActionTargetId = companionId,
+                companionAdRemainingCoins = 0,
+            )
+        }
+        viewModelScope.launch {
+            val owned = companionId in state.companionCollection.ownedIds
+            val status = if (owned) {
+                if (progress.selectCompanion(companionId)) {
+                    analytics.record(AnalyticsEvent.COMPANION_SELECTED, mapOf("companion_id" to companionId))
+                    CompanionActionStatus.SELECTED
+                } else {
+                    CompanionActionStatus.FEATURE_LOCKED
+                }
+            } else {
+                when (progress.purchaseCompanion(companionId)) {
+                    CompanionPurchaseResult.PURCHASED -> {
+                        analytics.record(AnalyticsEvent.COMPANION_PURCHASED, mapOf("companion_id" to companionId))
+                        CompanionActionStatus.PURCHASED
+                    }
+                    CompanionPurchaseResult.ALREADY_OWNED -> CompanionActionStatus.SELECTED
+                    CompanionPurchaseResult.INSUFFICIENT_COINS -> CompanionActionStatus.INSUFFICIENT_COINS
+                    CompanionPurchaseResult.FEATURE_LOCKED -> CompanionActionStatus.FEATURE_LOCKED
+                }
+            }
+            refreshProgress()
+            _uiState.update { it.copy(companionActionInFlight = false, companionActionStatus = status) }
+        }
+    }
+
+    fun watchAdForCompanion(companionId: String) {
+        val state = _uiState.value
+        val companion = CompanionCatalog.find(companionId) ?: return
+        if (
+            state.completedCount < CompanionCatalog.UNLOCK_CAMPAIGN_COMPLETIONS ||
+            companion.price <= 0 || companionId in state.companionCollection.ownedIds ||
+            state.companionActionInFlight
+        ) return
+        if (!state.adServicesEnabled) {
+            _uiState.update {
+                it.copy(
+                    companionActionStatus = CompanionActionStatus.AD_UNAVAILABLE,
+                    companionActionTargetId = companionId,
+                )
+            }
+            return
+        }
+        _uiState.update {
+            it.copy(
+                companionActionInFlight = true,
+                companionActionStatus = CompanionActionStatus.AD_LOADING,
+                companionActionTargetId = companionId,
+            )
+        }
+        viewModelScope.launch {
+            val placement = "companion_unlock"
+            analytics.record(AnalyticsEvent.AD_REQUEST, mapOf("placement" to placement, "companion_id" to companionId))
+            var transactionId: String? = null
+            val adResult = ads.showRewarded { transactionId = it }
+            val outcome = if (adResult == AdResult.SHOWN) {
+                transactionId?.let { progress.rewardCompanionWithAd(companionId, it) }
+            } else {
+                null
+            }
+            analytics.record(
+                AnalyticsEvent.AD_RESULT,
+                mapOf(
+                    "placement" to placement,
+                    "companion_id" to companionId,
+                    "result" to adResult.name,
+                    "reward_result" to (outcome?.result?.name ?: "NONE"),
+                ),
+            )
+            val status = when (outcome?.result) {
+                CompanionAdRewardResult.PROGRESS -> CompanionActionStatus.AD_PROGRESS
+                CompanionAdRewardResult.UNLOCKED -> {
+                    analytics.record(
+                        AnalyticsEvent.COMPANION_PURCHASED,
+                        mapOf("companion_id" to companionId, "payment" to "rewarded_ads"),
+                    )
+                    CompanionActionStatus.AD_UNLOCKED
+                }
+                CompanionAdRewardResult.ALREADY_OWNED -> CompanionActionStatus.SELECTED
+                CompanionAdRewardResult.FEATURE_LOCKED -> CompanionActionStatus.FEATURE_LOCKED
+                CompanionAdRewardResult.DUPLICATE_REWARD, null -> CompanionActionStatus.AD_UNAVAILABLE
+            }
+            refreshProgress()
+            _uiState.update {
+                it.copy(
+                    companionActionInFlight = false,
+                    companionActionStatus = status,
+                    companionAdRemainingCoins = outcome?.remainingCoins ?: 0,
+                )
+            }
+        }
     }
 
     fun openGarden(gardenId: String) {
@@ -622,6 +752,7 @@ class MazeBloomViewModel(
         val settings = progress.settings()
         val coins = progress.coinBalance()
         val skipped = progress.skippedLevelIds()
+        val companions = progress.companionCollection()
         val endlessSnapshot = endlessRepository.snapshot()
         _uiState.update {
             it.copy(
@@ -634,6 +765,7 @@ class MazeBloomViewModel(
                 dailyHistoryCount = dailyHistoryCount,
                 settings = settings,
                 coinBalance = coins,
+                companionCollection = companions,
                 skippedLevelIds = skipped,
                 endless = endlessSnapshot,
             )
