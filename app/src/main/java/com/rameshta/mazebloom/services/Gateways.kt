@@ -39,9 +39,13 @@ class FakeAdsGateway(
 
 object AppOpenAdPolicy {
     const val COOLDOWN_MS = 60L * 60L * 1_000L
+    const val REQUIRED_AD_FREE_LAUNCHES = 3
 
     fun isCooldownElapsed(lastShownAtMs: Long, nowMs: Long): Boolean =
         lastShownAtMs <= 0L || (nowMs >= lastShownAtMs && nowMs - lastShownAtMs >= COOLDOWN_MS)
+
+    fun isLaunchEligible(recordedLaunches: Int): Boolean =
+        recordedLaunches > REQUIRED_AD_FREE_LAUNCHES
 }
 
 object RewardedToInterstitialPolicy {
