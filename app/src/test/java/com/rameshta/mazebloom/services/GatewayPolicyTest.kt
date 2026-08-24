@@ -33,8 +33,9 @@ class GatewayPolicyTest {
         assertEquals(2, transactions.size)
     }
 
-    @Test fun appOpenCooldownIsTwoHoursAndRejectsClockRollback() {
+    @Test fun appOpenCooldownIsOneHourAndRejectsClockRollback() {
         val shownAt = 10_000L
+        assertEquals(60L * 60L * 1_000L, AppOpenAdPolicy.COOLDOWN_MS)
         assertFalse(AppOpenAdPolicy.isCooldownElapsed(shownAt, shownAt))
         assertFalse(AppOpenAdPolicy.isCooldownElapsed(shownAt, shownAt - 1L))
         assertFalse(AppOpenAdPolicy.isCooldownElapsed(shownAt, shownAt + AppOpenAdPolicy.COOLDOWN_MS - 1L))
